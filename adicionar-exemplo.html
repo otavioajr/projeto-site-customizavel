@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adicionar Página de Exemplo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #0E7C7B;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #0E7C7B;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #0a5f5e;
+    }
+    .success {
+      background: #C6F6D5;
+      color: #22543D;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    .info {
+      background: #E6FFFA;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #0E7C7B;
+    }
+    a {
+      color: #0E7C7B;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Adicionar Página de Exemplo</h1>
+    
+    <div class="info">
+      <strong>📋 O que será criado:</strong><br>
+      Uma página de formulário de inscrição completa inspirada no site Chaves Adventure, com 10 campos incluindo:
+      <ul>
+        <li>Nome do Aluno e Responsável</li>
+        <li>Email e Telefone</li>
+        <li>Data de Nascimento</li>
+        <li>Tamanho de Camiseta</li>
+        <li>Experiência em Escalada</li>
+        <li>Restrições Alimentares</li>
+        <li>Observações e Termos</li>
+      </ul>
+    </div>
+
+    <button onclick="adicionarPagina()">✨ Adicionar Página de Exemplo</button>
+    <button onclick="window.location.href='/admin.html'" style="background: #F4A261;">🎨 Ir para Admin</button>
+    <button onclick="window.location.href='/p/#inscricao-climbing'" style="background: #4299E1;">👁️ Ver Formulário</button>
+
+    <div class="success" id="success">
+      ✅ Página adicionada com sucesso!<br><br>
+      <strong>Próximos passos:</strong><br>
+      1. <a href="/p/#inscricao-climbing">Ver o formulário</a><br>
+      2. <a href="/admin.html">Gerenciar no Admin</a><br>
+      3. Testar fazendo uma inscrição<br>
+      4. Ver inscrições na aba "Inscrições" do admin
+    </div>
+  </div>
+
+  <script>
+    function adicionarPagina() {
+      const examplePage = {
+        id: 'id_' + Date.now() + '_example',
+        label: 'Inscrição Climbing Adventure',
+        slug: 'inscricao-climbing',
+        order: 1,
+        is_active: true,
+        is_form: true,
+        seo_title: 'Inscrição - Climbing Adventure 2025',
+        seo_description: 'Inscreva-se para a aventura de escalada',
+        form_config: {
+          title: 'Inscrição - Climbing Adventure 2025',
+          description: 'Preencha o formulário abaixo para garantir sua vaga na aventura!',
+          fields: [
+            {
+              type: 'text',
+              label: 'Nome do Aluno',
+              placeholder: 'Nome completo do participante',
+              required: true,
+              options: []
+            },
+            {
+              type: 'text',
+              label: 'Nome do Responsável',
+              placeholder: 'Nome completo do responsável',
+              required: true,
+              options: []
+            },
+            {
+              type: 'email',
+              label: 'Email',
+              placeholder: 'seu@email.com',
+              required: true,
+              options: []
+            },
+            {
+              type: 'tel',
+              label: 'Telefone/WhatsApp',
+              placeholder: '(11) 99999-9999',
+              required: true,
+              options: []
+            },
+            {
+              type: 'date',
+              label: 'Data de Nascimento do Aluno',
+              placeholder: '',
+              required: true,
+              options: []
+            },
+            {
+              type: 'select',
+              label: 'Tamanho da Camiseta',
+              placeholder: '',
+              required: true,
+              options: ['PP', 'P', 'M', 'G', 'GG']
+            },
+            {
+              type: 'select',
+              label: 'Experiência em Escalada',
+              placeholder: '',
+              required: true,
+              options: ['Nenhuma', 'Iniciante', 'Intermediário', 'Avançado']
+            },
+            {
+              type: 'checkbox-group',
+              label: 'Restrições Alimentares',
+              placeholder: '',
+              required: false,
+              options: ['Vegetariano', 'Vegano', 'Intolerância à Lactose', 'Alergia a Glúten', 'Nenhuma']
+            },
+            {
+              type: 'textarea',
+              label: 'Observações',
+              placeholder: 'Alguma informação adicional que devemos saber?',
+              required: false,
+              options: []
+            },
+            {
+              type: 'checkbox',
+              label: 'Termos',
+              placeholder: 'Li e aceito os termos de participação e autorizo a participação',
+              required: true,
+              options: []
+            }
+          ]
+        }
+      };
+
+      // Carregar páginas existentes
+      const pages = JSON.parse(localStorage.getItem('pages') || '[]');
+      
+      // Verificar se já existe
+      const exists = pages.find(p => p.slug === 'inscricao-climbing');
+      if (exists) {
+        alert('⚠️ Já existe uma página com este slug. Remova-a primeiro no admin.');
+        return;
+      }
+      
+      // Adicionar nova página
+      pages.push(examplePage);
+      localStorage.setItem('pages', JSON.stringify(pages));
+      
+      // Mostrar sucesso
+      document.getElementById('success').style.display = 'block';
+      
+      console.log('✅ Página adicionada com sucesso!');
+      console.log('📋 Acesse: /p/#inscricao-climbing');
+    }
+  </script>
+</body>
+</html>

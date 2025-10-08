@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Aventuras</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    .admin-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 100vh;
+      gap: 0;
+    }
+
+    .admin-editor {
+      background: var(--color-bg);
+      padding: var(--spacing-md);
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    .admin-preview {
+      background: var(--color-gray);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .admin-header {
+      background: var(--color-primary);
+      color: var(--color-white);
+      padding: var(--spacing-sm) var(--spacing-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .admin-header h1 {
+      font-size: 1.5rem;
+      margin: 0;
+    }
+
+    .admin-header a {
+      color: var(--color-white);
+      text-decoration: underline;
+    }
+
+    .admin-tabs {
+      display: flex;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-md);
+      border-bottom: 2px solid var(--color-gray);
+    }
+
+    .admin-tab {
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--color-gray-dark);
+      transition: var(--transition);
+      border-bottom: 3px solid transparent;
+    }
+
+    .admin-tab.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    .admin-tab:hover {
+      color: var(--color-primary);
+    }
+
+    .admin-section {
+      display: none;
+      animation: fadeIn 0.3s;
+    }
+
+    .admin-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+      color: var(--color-text);
+    }
+
+    .form-hint {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--color-gray-dark);
+      margin-top: 4px;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="url"],
+    .form-group input[type="email"],
+    .form-group input[type="number"],
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: var(--spacing-sm);
+      border: 1px solid var(--color-gray);
+      border-radius: var(--border-radius);
+      font-size: 1rem;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(14, 124, 123, 0.1);
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .form-group input[type="color"] {
+      width: 80px;
+      height: 40px;
+      border: 1px solid var(--color-gray);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+    }
+
+    .color-picker-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-sm);
+    }
+
+    .color-picker-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .color-picker-item label {
+      margin: 0;
+      flex: 1;
+    }
+
+    .subsection {
+      background: var(--color-white);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-md);
+      box-shadow: var(--shadow);
+    }
+
+    .subsection-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-xs);
+      border-bottom: 2px solid var(--color-gray-light);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: var(--spacing-sm);
+      margin-top: var(--spacing-md);
+    }
+
+    .btn-small {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: 0.875rem;
+    }
+
+    .btn-danger {
+      background: #E53E3E;
+      color: var(--color-white);
+    }
+
+    .btn-danger:hover {
+      background: #C53030;
+    }
+
+    .list-item {
+      background: var(--color-gray-light);
+      padding: var(--spacing-sm);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-sm);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .list-item-info {
+      flex: 1;
+    }
+
+    .list-item-actions {
+      display: flex;
+      gap: var(--spacing-xs);
+    }
+
+    .preview-container {
+      flex: 1;
+      background: var(--color-white);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-label {
+      background: var(--color-secondary);
+      color: var(--color-white);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    #preview-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .array-item {
+      background: var(--color-gray-light);
+      padding: var(--spacing-sm);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-sm);
+      position: relative;
+    }
+
+    .array-item-remove {
+      position: absolute;
+      top: var(--spacing-xs);
+      right: var(--spacing-xs);
+      background: #E53E3E;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .array-item-remove:hover {
+      background: #C53030;
+    }
+
+    .page-item {
+      background: var(--color-white);
+      padding: var(--spacing-sm);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-sm);
+      border: 1px solid var(--color-gray);
+    }
+
+    .page-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .page-item-title {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .page-item-meta {
+      font-size: 0.875rem;
+      color: var(--color-gray-dark);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--color-gray);
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--color-primary);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+
+    .alert {
+      padding: var(--spacing-sm);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .alert-success {
+      background: #C6F6D5;
+      color: #22543D;
+      border: 1px solid #9AE6B4;
+    }
+
+    .alert-error {
+      background: #FED7D7;
+      color: #742A2A;
+      border: 1px solid #FC8181;
+    }
+
+    .form-field-item {
+      background: var(--color-gray-light);
+      padding: var(--spacing-sm);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-sm);
+      position: relative;
+      border-left: 3px solid var(--color-primary);
+    }
+
+    .form-field-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .form-field-item-title {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .form-field-item select {
+      width: 100%;
+      padding: var(--spacing-xs);
+      border: 1px solid var(--color-gray);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    /* Inscrições */
+    .inscriptions-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+      color: var(--color-white);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      text-align: center;
+    }
+
+    .stat-card h4 {
+      margin: 0 0 var(--spacing-xs) 0;
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .inscriptions-filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr 2fr auto auto;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+      align-items: end;
+    }
+
+    .inscriptions-table-container {
+      overflow-x: auto;
+      background: var(--color-white);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+    }
+
+    .inscriptions-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .inscriptions-table th {
+      background: var(--color-primary);
+      color: var(--color-white);
+      padding: var(--spacing-sm);
+      text-align: left;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    .inscriptions-table td {
+      padding: var(--spacing-sm);
+      border-bottom: 1px solid var(--color-gray);
+    }
+
+    .inscriptions-table tbody tr:hover {
+      background: var(--color-gray-light);
+    }
+
+    .inscription-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .inscription-status.pending {
+      background: #FED7D7;
+      color: #742A2A;
+    }
+
+    .inscription-status.confirmed {
+      background: #C6F6D5;
+      color: #22543D;
+    }
+
+    .inscription-data {
+      font-size: 0.875rem;
+      max-width: 300px;
+    }
+
+    .inscription-data-item {
+      margin-bottom: 4px;
+    }
+
+    .inscription-data-label {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .details-button {
+      background: #4299E1;
+      color: var(--color-white);
+      border: none;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .details-button:hover {
+      background: #2B6CB0;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: var(--spacing-md);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--color-white);
+      border-radius: var(--border-radius-lg);
+      padding: var(--spacing-lg);
+      max-width: 700px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--color-text);
+    }
+
+    .modal-body {
+      display: grid;
+      gap: var(--spacing-sm);
+    }
+
+    .modal-item {
+      display: flex;
+      flex-direction: column;
+      background: var(--color-gray-light);
+      padding: var(--spacing-sm);
+      border-radius: var(--border-radius);
+    }
+
+    .modal-item strong {
+      color: var(--color-primary);
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 1024px) {
+      .admin-container {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-preview {
+        position: relative;
+        height: 600px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <!-- Editor (Esquerda) -->
+    <div class="admin-editor">
+      <div class="admin-header">
+        <h1>🎨 Admin</h1>
+        <a href="/" target="_blank">Ver Site →</a>
+      </div>
+
+      <!-- Alert -->
+      <div id="alert-container"></div>
+
+      <!-- Tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="home">Home</button>
+        <button class="admin-tab" data-tab="pages">Páginas</button>
+        <button class="admin-tab" data-tab="inscriptions">Inscrições</button>
+        <button class="admin-tab" data-tab="theme">Tema</button>
+      </div>
+
+      <!-- Home Section -->
+      <div class="admin-section active" id="section-home">
+        <!-- Hero -->
+        <div class="subsection">
+          <h3 class="subsection-title">Hero</h3>
+          <div class="form-group">
+            <label for="hero-title">Título</label>
+            <input type="text" id="hero-title" placeholder="Viva a aventura com segurança">
+          </div>
+          <div class="form-group">
+            <label for="hero-subtitle">Subtítulo</label>
+            <textarea id="hero-subtitle" placeholder="Guias certificados..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="hero-cta-label">Texto do Botão</label>
+            <input type="text" id="hero-cta-label" placeholder="Agendar Agora">
+          </div>
+          <div class="form-group">
+            <label for="hero-cta-link">Link do Botão</label>
+            <input type="text" id="hero-cta-link" placeholder="#contato">
+            <span class="form-hint">Ex: #contato ou https://...</span>
+          </div>
+          <div class="form-group">
+            <label for="hero-bg">URL da Imagem de Fundo</label>
+            <input type="url" id="hero-bg" placeholder="https://...">
+            <span class="form-hint">URL pública de imagem (https://...)</span>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="subsection">
+          <h3 class="subsection-title">Sobre</h3>
+          <div class="form-group">
+            <label for="about-title">Título</label>
+            <input type="text" id="about-title" placeholder="Sobre mim">
+          </div>
+          <div class="form-group">
+            <label for="about-text">Texto</label>
+            <textarea id="about-text" placeholder="Sou guia de montanha..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="about-image">URL da Imagem</label>
+            <input type="url" id="about-image" placeholder="https://...">
+            <span class="form-hint">URL pública de imagem (https://...)</span>
+          </div>
+        </div>
+
+        <!-- Services -->
+        <div class="subsection">
+          <h3 class="subsection-title">Serviços (máx. 3)</h3>
+          <div id="services-list"></div>
+          <button class="btn btn-secondary btn-small" id="add-service">+ Adicionar Serviço</button>
+        </div>
+
+        <!-- Testimonials -->
+        <div class="subsection">
+          <h3 class="subsection-title">Depoimentos</h3>
+          <div id="testimonials-list"></div>
+          <button class="btn btn-secondary btn-small" id="add-testimonial">+ Adicionar Depoimento</button>
+        </div>
+
+        <!-- Gallery -->
+        <div class="subsection">
+          <h3 class="subsection-title">Galeria (máx. 6 imagens)</h3>
+          <div id="gallery-list"></div>
+          <button class="btn btn-secondary btn-small" id="add-gallery-image">+ Adicionar Imagem</button>
+        </div>
+
+        <!-- Contact -->
+        <div class="subsection">
+          <h3 class="subsection-title">Contato</h3>
+          <div class="form-group">
+            <label for="contact-whatsapp">WhatsApp (link)</label>
+            <input type="url" id="contact-whatsapp" placeholder="https://wa.me/5511999999999">
+          </div>
+          <div class="form-group">
+            <label for="contact-email">Email</label>
+            <input type="email" id="contact-email" placeholder="contato@aventura.com">
+          </div>
+          <div class="form-group">
+            <label for="contact-instagram">Instagram (link)</label>
+            <input type="url" id="contact-instagram" placeholder="https://instagram.com/...">
+          </div>
+          <div class="form-group">
+            <label for="contact-location">Localização</label>
+            <input type="text" id="contact-location" placeholder="São Paulo, Brasil">
+          </div>
+        </div>
+
+        <!-- SEO -->
+        <div class="subsection">
+          <h3 class="subsection-title">SEO</h3>
+          <div class="form-group">
+            <label for="seo-title">Título da Página</label>
+            <input type="text" id="seo-title" placeholder="Aventuras Guiadas com Segurança">
+          </div>
+          <div class="form-group">
+            <label for="seo-description">Descrição</label>
+            <textarea id="seo-description" placeholder="Trilhas, escalada e mergulho..."></textarea>
+            <span class="form-hint">Máx. 160 caracteres</span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="save-home">💾 Salvar Home</button>
+          <button class="btn btn-secondary" id="revert-home">↺ Reverter</button>
+          <button class="btn btn-secondary" id="export-home">📥 Exportar JSON</button>
+          <button class="btn btn-secondary" id="import-home">📤 Importar JSON</button>
+        </div>
+      </div>
+
+      <!-- Pages Section -->
+      <div class="admin-section" id="section-pages">
+        <div class="subsection">
+          <h3 class="subsection-title">Páginas do Menu</h3>
+          <div id="pages-list"></div>
+          <button class="btn btn-primary" id="add-page">+ Nova Página</button>
+        </div>
+
+        <!-- Page Form (hidden by default) -->
+        <div class="subsection" id="page-form" style="display: none;">
+          <h3 class="subsection-title" id="page-form-title">Nova Página</h3>
+          <div class="form-group">
+            <label for="page-label">Label (nome no menu)</label>
+            <input type="text" id="page-label" placeholder="Roteiros">
+          </div>
+          <div class="form-group">
+            <label for="page-slug">Slug (URL)</label>
+            <input type="text" id="page-slug" placeholder="roteiros">
+            <span class="form-hint">Apenas letras minúsculas, números e hífens</span>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="page-is-form"> Esta página é um formulário de inscrição
+            </label>
+            <span class="form-hint">Marque se esta página terá um formulário para inscrição em aventuras</span>
+          </div>
+          
+          <!-- Campos do Canva (aparecem quando NÃO é formulário) -->
+          <div id="canva-fields">
+            <div class="form-group">
+              <label for="page-canva-url">URL do Canva (embed)</label>
+              <input type="url" id="page-canva-url" placeholder="https://www.canva.com/design/...">
+              <span class="form-hint">Deve começar com https://www.canva.com/</span>
+            </div>
+          </div>
+          
+          <!-- Campos do Formulário (aparecem quando É formulário) -->
+          <div id="form-fields" style="display: none;">
+            <div class="form-group">
+              <label for="form-title">Título do Formulário</label>
+              <input type="text" id="form-title" placeholder="Inscrição para Trilha do Pico">
+            </div>
+            <div class="form-group">
+              <label for="form-description">Descrição</label>
+              <textarea id="form-description" placeholder="Preencha o formulário abaixo para se inscrever..."></textarea>
+              <span class="form-hint">As inscrições serão gerenciadas na aba "Inscrições" do admin</span>
+            </div>
+            
+            <h4 style="margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm);">Campos do Formulário</h4>
+            <div id="form-fields-list"></div>
+            <button type="button" class="btn btn-secondary btn-small" id="add-form-field">+ Adicionar Campo</button>
+          </div>
+          
+          <div class="form-group">
+            <label for="page-order">Ordem</label>
+            <input type="number" id="page-order" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label for="page-seo-title">SEO - Título</label>
+            <input type="text" id="page-seo-title" placeholder="Roteiros de Aventura">
+          </div>
+          <div class="form-group">
+            <label for="page-seo-desc">SEO - Descrição</label>
+            <textarea id="page-seo-desc" placeholder="Trilhas e expedições guiadas."></textarea>
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="page-active" checked> Página ativa
+            </label>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-primary" id="save-page">💾 Salvar Página</button>
+            <button class="btn btn-secondary" id="cancel-page">✕ Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inscriptions Section -->
+      <div class="admin-section" id="section-inscriptions">
+        <div class="subsection">
+          <h3 class="subsection-title">Gerenciamento de Inscrições</h3>
+          
+          <!-- Estatísticas -->
+          <div class="inscriptions-stats">
+            <div class="stat-card">
+              <h4>Total de Inscrições</h4>
+              <p class="stat-number" id="total-inscriptions">0</p>
+            </div>
+            <div class="stat-card">
+              <h4>Confirmadas</h4>
+              <p class="stat-number" id="confirmed-inscriptions">0</p>
+            </div>
+            <div class="stat-card">
+              <h4>Pendentes</h4>
+              <p class="stat-number" id="pending-inscriptions">0</p>
+            </div>
+          </div>
+          
+          <!-- Filtros -->
+          <div class="inscriptions-filters">
+            <div class="form-group">
+              <label for="filter-page">Filtrar por Página</label>
+              <select id="filter-page">
+                <option value="">Todas as páginas</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filter-status">Filtrar por Status</label>
+              <select id="filter-status">
+                <option value="">Todos</option>
+                <option value="pending">Pendente</option>
+                <option value="confirmed">Confirmado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="text" id="search-inscription" placeholder="Buscar por nome, email...">
+            </div>
+            <button class="btn btn-secondary" id="export-inscriptions">📥 Exportar CSV</button>
+            <button class="btn btn-danger" id="clear-inscriptions">🗑️ Limpar Tudo</button>
+          </div>
+          
+          <!-- Lista de Inscrições -->
+          <div class="inscriptions-table-container">
+            <table class="inscriptions-table" id="inscriptions-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Data</th>
+                  <th>Página</th>
+                  <th>Detalhes</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="inscriptions-tbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 2rem;">
+                    Nenhuma inscrição ainda
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme Section -->
+      <div class="admin-section" id="section-theme">
+        <div class="subsection">
+          <h3 class="subsection-title">Cores do Tema</h3>
+          <div class="color-picker-group">
+            <div class="color-picker-item">
+              <label for="theme-primary">Primária</label>
+              <input type="color" id="theme-primary" value="#0E7C7B">
+            </div>
+            <div class="color-picker-item">
+              <label for="theme-secondary">Secundária</label>
+              <input type="color" id="theme-secondary" value="#F4A261">
+            </div>
+            <div class="color-picker-item">
+              <label for="theme-text">Texto</label>
+              <input type="color" id="theme-text" value="#1B1B1B">
+            </div>
+            <div class="color-picker-item">
+              <label for="theme-bg">Fundo</label>
+              <input type="color" id="theme-bg" value="#FAFAFA">
+            </div>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-primary" id="save-theme">💾 Salvar Tema</button>
+            <button class="btn btn-secondary" id="revert-theme">↺ Reverter</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview (Direita) -->
+    <div class="admin-preview">
+      <div class="preview-container">
+        <iframe id="preview-frame" src="/index.html?preview=1"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalhes Inscrição -->
+  <div class="modal-overlay" id="inscription-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Detalhes da Inscrição</h2>
+        <button class="modal-close" id="close-modal" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="btn-group" style="margin-top: var(--spacing-md); justify-content: flex-end;">
+        <button class="btn btn-secondary" id="modal-confirm"></button>
+        <button class="btn btn-danger" id="modal-delete">🗑️ Excluir</button>
+      </div>
+    </div>
+  </div>
+  <script src="/assets/js/admin.js"></script>
+</body>
+</html>

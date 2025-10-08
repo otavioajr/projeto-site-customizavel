@@ -1,0 +1,22 @@
+{
+  "name": "landing-page-aventuras",
+  "version": "1.0.0",
+  "description": "Landing page dinâmica para profissional de esportes de aventura com admin editável",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve -p 3000",
+    "build": "echo 'Static site - no build needed'",
+    "preview": "npx serve -p 3000"
+  },
+  "keywords": [
+    "landing-page",
+    "static-site",
+    "vercel",
+    "admin"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}

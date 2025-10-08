@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <title>Página</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+  <style>
+    .page-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .page-header {
+      background: var(--color-white);
+      box-shadow: var(--shadow);
+      padding: var(--spacing-sm) 0;
+    }
+    
+    .page-header .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .page-logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--color-primary);
+    }
+    
+    .page-back {
+      color: var(--color-text);
+      font-weight: 500;
+      transition: var(--transition);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--border-radius);
+    }
+    
+    .page-back:hover {
+      color: var(--color-primary);
+      background: var(--color-gray-light);
+    }
+    
+    .page-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .canva-container {
+      flex: 1;
+      position: relative;
+      min-height: 600px;
+    }
+    
+    #canva-frame {
+      width: 100%;
+      height: 100%;
+      min-height: 600px;
+      border: none;
+    }
+    
+    .page-not-found {
+      text-align: center;
+      padding: var(--spacing-xl) var(--spacing-sm);
+    }
+    
+    .page-not-found h1 {
+      font-size: 3rem;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .page-not-found p {
+      font-size: 1.25rem;
+      color: var(--color-gray-dark);
+      margin-bottom: var(--spacing-md);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <!-- Header -->
+    <header class="page-header">
+      <div class="container">
+        <a href="/" class="page-logo">Aventuras</a>
+        <a href="/" class="page-back">← Voltar à Home</a>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="page-content" id="page-content">
+      <!-- Conteúdo será inserido aqui via JS -->
+    </div>
+  </div>
+
+  <script src="../assets/js/page.js"></script>
+</body>
+</html>
