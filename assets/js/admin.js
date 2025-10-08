@@ -8,8 +8,7 @@ const state = {
   previewFrame: null,
   formFields: [],
   inscriptions: {},
-  filteredInscriptions: [],
-  selectedInscription: null
+  filteredInscriptions: []
 };
 
 // ============= HELPERS =============
@@ -942,11 +941,21 @@ function initEventListeners() {
   document.getElementById('revert-theme').addEventListener('click', revertTheme);
   
   // Inscriptions
-  document.getElementById('filter-page').addEventListener('change', renderInscriptionsTable);
+  document.getElementById('filter-page').addEventListener('change', () => {
+    updateInscriptionsStats();
+    renderInscriptionsTable();
+  });
   document.getElementById('filter-status').addEventListener('change', renderInscriptionsTable);
   document.getElementById('search-inscription').addEventListener('input', renderInscriptionsTable);
   document.getElementById('export-inscriptions').addEventListener('click', exportInscriptionsCSV);
-  document.getElementById('clear-inscriptions').addEventListener('click', clearAllInscriptions);
+  
+  // Modal
+  document.getElementById('close-modal').addEventListener('click', closeInscriptionModal);
+  document.getElementById('inscription-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'inscription-modal') {
+      closeInscriptionModal();
+    }
+  });
 }
 
 // ============= INSCRIPTIONS MANAGER =============
@@ -965,12 +974,16 @@ function loadInscriptionsEditor() {
 }
 
 function updateInscriptionsStats() {
+  const filterPage = document.getElementById('filter-page')?.value;
+  
   let total = 0;
   let confirmed = 0;
   let pending = 0;
   
-  Object.keys(state.inscriptions).forEach(pageSlug => {
-    state.inscriptions[pageSlug].forEach(inscription => {
+  // Se houver filtro de página, contar apenas dessa página
+  if (filterPage) {
+    const pageInscriptions = state.inscriptions[filterPage] || [];
+    pageInscriptions.forEach(inscription => {
       total++;
       if (inscription.status === 'confirmed') {
         confirmed++;
@@ -978,7 +991,19 @@ function updateInscriptionsStats() {
         pending++;
       }
     });
-  });
+  } else {
+    // Contar todas (fallback, não deve acontecer mais)
+    Object.keys(state.inscriptions).forEach(pageSlug => {
+      state.inscriptions[pageSlug].forEach(inscription => {
+        total++;
+        if (inscription.status === 'confirmed') {
+          confirmed++;
+        } else {
+          pending++;
+        }
+      });
+    });
+  }
   
   document.getElementById('total-inscriptions').textContent = total;
   document.getElementById('confirmed-inscriptions').textContent = confirmed;
@@ -987,13 +1012,31 @@ function updateInscriptionsStats() {
 
 function populatePageFilter() {
   const select = document.getElementById('filter-page');
-  const pages = loadPages().filter(p => p.is_form);
+  // Filtrar apenas páginas de formulário que estão ativas
+  const pages = loadPages().filter(p => p.is_form && p.is_active);
   
-  select.innerHTML = '<option value="">Todas as páginas</option>';
-  pages.forEach(page => {
+  select.innerHTML = '';
+  
+  // Se não houver páginas ativas, mostrar mensagem
+  if (pages.length === 0) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Nenhuma página de formulário ativa';
+    select.appendChild(option);
+    return;
+  }
+  
+  // Adicionar páginas ativas
+  pages.forEach((page, index) => {
     const option = document.createElement('option');
     option.value = page.slug;
     option.textContent = page.label;
+    
+    // Selecionar a primeira por padrão
+    if (index === 0) {
+      option.selected = true;
+    }
+    
     select.appendChild(option);
   });
 }
@@ -1004,20 +1047,30 @@ function renderInscriptionsTable() {
   const filterStatus = document.getElementById('filter-status').value;
   const searchTerm = document.getElementById('search-inscription').value.toLowerCase();
   
-  // Coletar todas as inscrições
+  // Se não houver página selecionada, não mostrar nada
+  if (!filterPage) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 2rem;">
+          Selecione uma página de formulário
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  // Coletar inscrições apenas da página selecionada
   let allInscriptions = [];
-  Object.keys(state.inscriptions).forEach(pageSlug => {
-    state.inscriptions[pageSlug].forEach(inscription => {
-      allInscriptions.push({
-        ...inscription,
-        pageSlug: pageSlug
-      });
+  const pageInscriptions = state.inscriptions[filterPage] || [];
+  pageInscriptions.forEach(inscription => {
+    allInscriptions.push({
+      ...inscription,
+      pageSlug: filterPage
     });
   });
   
-  // Filtrar
+  // Filtrar por status e busca
   state.filteredInscriptions = allInscriptions.filter(inscription => {
-    if (filterPage && inscription.pageSlug !== filterPage) return false;
     if (filterStatus && inscription.status !== filterStatus) return false;
     
     if (searchTerm) {
@@ -1050,17 +1103,27 @@ function renderInscriptionsTable() {
     const date = new Date(inscription.timestamp).toLocaleString('pt-BR');
     const status = inscription.status || 'pending';
     
-    // Montar dados
+    // Extrair nome do candidato (primeiro campo que contenha "nome" mas não "responsável")
+    let candidateName = '-';
+    Object.keys(inscription.data).forEach(key => {
+      const keyLower = key.toLowerCase();
+      if (candidateName === '-' && keyLower.includes('nome')) {
+        // Excluir campos de responsável
+        if (!keyLower.includes('responsável') && !keyLower.includes('responsavel')) {
+          const value = inscription.data[key];
+          if (value && typeof value === 'string') {
+            candidateName = value;
+          }
+        }
+      }
+    });
+    
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${index + 1}</td>
       <td>${date}</td>
+      <td><strong>${candidateName}</strong></td>
       <td>${pageName}</td>
-      <td>
-        <button class="details-button" data-id="${inscription.id}" data-slug="${inscription.pageSlug}">
-          Ver dados
-        </button>
-      </td>
       <td>
         <span class="inscription-status ${status}">
           ${status === 'confirmed' ? 'Confirmado' : 'Pendente'}
@@ -1068,6 +1131,7 @@ function renderInscriptionsTable() {
       </td>
       <td>
         <div class="btn-group">
+          <button class="btn btn-secondary btn-small view-inscription" data-id="${inscription.id}" data-slug="${inscription.pageSlug}">👁️ Ver Detalhes</button>
           ${status === 'pending' 
             ? `<button class="btn btn-secondary btn-small confirm-inscription" data-id="${inscription.id}" data-slug="${inscription.pageSlug}">✓ Confirmar</button>`
             : `<button class="btn btn-secondary btn-small unconfirm-inscription" data-id="${inscription.id}" data-slug="${inscription.pageSlug}">✗ Desconfirmar</button>`
@@ -1080,11 +1144,19 @@ function renderInscriptionsTable() {
   });
   
   // Event listeners
+  tbody.querySelectorAll('.view-inscription').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = parseInt(e.target.dataset.id);
+      const slug = e.target.dataset.slug;
+      showInscriptionModal(slug, id);
+    });
+  });
+  
   tbody.querySelectorAll('.confirm-inscription').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const slug = e.target.dataset.slug;
-      confirmInscription(slug, id, true);
+      confirmInscription(slug, id);
     });
   });
   
@@ -1092,7 +1164,7 @@ function renderInscriptionsTable() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const slug = e.target.dataset.slug;
-      unconfirmInscription(slug, id, true);
+      unconfirmInscription(slug, id);
     });
   });
   
@@ -1100,20 +1172,54 @@ function renderInscriptionsTable() {
     btn.addEventListener('click', (e) => {
       const id = parseInt(e.target.dataset.id);
       const slug = e.target.dataset.slug;
-      deleteInscription(slug, id, true);
-    });
-  });
-  
-  tbody.querySelectorAll('.details-button').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const slug = e.target.dataset.slug;
-      showInscriptionDetails(slug, id, true);
+      deleteInscription(slug, id);
     });
   });
 }
 
-function confirmInscription(pageSlug, id, keepModalOpen = false) {
+function showInscriptionModal(pageSlug, id) {
+  const inscription = state.inscriptions[pageSlug].find(i => i.id === id);
+  if (!inscription) return;
+  
+  const page = state.pages.find(p => p.slug === pageSlug);
+  const pageName = page ? page.label : pageSlug;
+  const date = new Date(inscription.timestamp).toLocaleString('pt-BR');
+  
+  let modalContent = `
+    <div class="modal-data-item">
+      <span class="modal-data-label">Página</span>
+      <div class="modal-data-value">${pageName}</div>
+    </div>
+    <div class="modal-data-item">
+      <span class="modal-data-label">Data de Inscrição</span>
+      <div class="modal-data-value">${date}</div>
+    </div>
+  `;
+  
+  Object.keys(inscription.data).forEach(key => {
+    if (!key.startsWith('_')) {
+      const value = Array.isArray(inscription.data[key]) 
+        ? inscription.data[key].join(', ') 
+        : inscription.data[key];
+      
+      modalContent += `
+        <div class="modal-data-item">
+          <span class="modal-data-label">${key}</span>
+          <div class="modal-data-value">${value || '-'}</div>
+        </div>
+      `;
+    }
+  });
+  
+  document.getElementById('modal-body').innerHTML = modalContent;
+  document.getElementById('inscription-modal').classList.add('active');
+}
+
+function closeInscriptionModal() {
+  document.getElementById('inscription-modal').classList.remove('active');
+}
+
+function confirmInscription(pageSlug, id) {
   const inscription = state.inscriptions[pageSlug].find(i => i.id === id);
   if (inscription) {
     inscription.status = 'confirmed';
@@ -1121,14 +1227,6 @@ function confirmInscription(pageSlug, id, keepModalOpen = false) {
     updateInscriptionsStats();
     renderInscriptionsTable();
     showAlert('Inscrição confirmada!');
-    if (!keepModalOpen) {
-    if (state.selectedInscription && state.selectedInscription.id === id && state.selectedInscription.pageSlug === pageSlug) {
-      state.selectedInscription = {
-        pageSlug,
-        id
-      };
-      showInscriptionDetails(pageSlug, id, true);
-    }
   }
 }
 
@@ -1140,13 +1238,6 @@ function unconfirmInscription(pageSlug, id) {
     updateInscriptionsStats();
     renderInscriptionsTable();
     showAlert('Inscrição marcada como pendente.');
-    if (state.selectedInscription && state.selectedInscription.id === id && state.selectedInscription.pageSlug === pageSlug) {
-      state.selectedInscription = {
-        pageSlug,
-        id
-      };
-      showInscriptionDetails(pageSlug, id, true);
-    }
   }
 }
 
@@ -1157,9 +1248,6 @@ function deleteInscription(pageSlug, id) {
     updateInscriptionsStats();
     renderInscriptionsTable();
     showAlert('Inscrição excluída.');
-    if (state.selectedInscription && state.selectedInscription.id === id && state.selectedInscription.pageSlug === pageSlug) {
-      closeInscriptionModal();
-    }
   }
 }
 
@@ -1212,73 +1300,27 @@ function exportInscriptionsCSV() {
 }
 
 function clearAllInscriptions() {
-  if (confirm('ATENÇÃO: Isso irá apagar TODAS as inscrições permanentemente. Deseja continuar?')) {
+  const filterPage = document.getElementById('filter-page').value;
+  
+  if (!filterPage) {
+    showAlert('Selecione uma página primeiro.', 'error');
+    return;
+  }
+  
+  const page = state.pages.find(p => p.slug === filterPage);
+  const pageName = page ? page.label : filterPage;
+  
+  if (confirm(`ATENÇÃO: Isso irá apagar TODAS as inscrições de "${pageName}" permanentemente. Deseja continuar?`)) {
     if (confirm('Tem certeza absoluta? Esta ação não pode ser desfeita!')) {
-      localStorage.removeItem('inscriptions');
-      state.inscriptions = {};
+      // Remover apenas as inscrições da página selecionada
+      delete state.inscriptions[filterPage];
+      localStorage.setItem('inscriptions', JSON.stringify(state.inscriptions));
+      
       updateInscriptionsStats();
       renderInscriptionsTable();
-      showAlert('Todas as inscrições foram removidas.');
-      closeInscriptionModal();
+      showAlert(`Todas as inscrições de "${pageName}" foram removidas.`);
     }
   }
-}
-
-function showInscriptionDetails(pageSlug, id, keepModalOpen = false) {
-  const inscription = state.inscriptions[pageSlug]?.find(i => i.id === id);
-  if (!inscription) return;
-
-  state.selectedInscription = { pageSlug, id };
-
-  const modal = document.getElementById('inscription-modal');
-  const modalBody = document.getElementById('modal-body');
-  const confirmBtn = document.getElementById('modal-confirm');
-  const deleteBtn = document.getElementById('modal-delete');
-
-  modalBody.innerHTML = '';
-
-  Object.keys(inscription.data).forEach(key => {
-    if (!key.startsWith('_')) {
-      const value = Array.isArray(inscription.data[key]) ? inscription.data[key].join(', ') : inscription.data[key];
-      const item = document.createElement('div');
-      item.className = 'modal-item';
-      item.innerHTML = `<strong>${key}</strong><span>${value || '—'}</span>`;
-      modalBody.appendChild(item);
-    }
-  });
-
-  const status = inscription.status === 'confirmed' ? 'confirmed' : 'pending';
-  confirmBtn.textContent = status === 'confirmed' ? '✗ Desconfirmar' : '✓ Confirmar';
-  confirmBtn.dataset.action = status === 'confirmed' ? 'unconfirm' : 'confirm';
-  confirmBtn.disabled = false;
-  deleteBtn.disabled = false;
-
-  if (!keepModalOpen) {
-    modal.classList.add('active');
-  }
-}
-
-function closeInscriptionModal() {
-  const modal = document.getElementById('inscription-modal');
-  modal.classList.remove('active');
-  state.selectedInscription = null;
-}
-
-function handleModalConfirm() {
-  if (!state.selectedInscription) return;
-  const { pageSlug, id } = state.selectedInscription;
-  const action = document.getElementById('modal-confirm').dataset.action;
-  if (action === 'confirm') {
-    confirmInscription(pageSlug, id, true);
-  } else {
-    unconfirmInscription(pageSlug, id, true);
-  }
-}
-
-function handleModalDelete() {
-  if (!state.selectedInscription) return;
-  const { pageSlug, id } = state.selectedInscription;
-  deleteInscription(pageSlug, id, true);
 }
 
 // ============= AUTH (MVP) =============

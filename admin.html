@@ -490,88 +490,114 @@
       color: var(--color-primary);
     }
 
-    .details-button {
-      background: #4299E1;
-      color: var(--color-white);
-      border: none;
-      padding: var(--spacing-xs) var(--spacing-sm);
-      border-radius: var(--border-radius);
-      cursor: pointer;
-      font-weight: 600;
-      transition: var(--transition);
-    }
-
-    .details-button:hover {
-      background: #2B6CB0;
-    }
-
-    .modal-overlay {
+    /* Modal */
+    .modal {
+      display: none;
       position: fixed;
-      top: 0;
+      z-index: 9999;
       left: 0;
+      top: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: var(--spacing-md);
+      background-color: rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.3s;
     }
 
-    .modal-overlay.active {
+    .modal.active {
       display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .modal-content {
       background: var(--color-white);
-      border-radius: var(--border-radius-lg);
-      padding: var(--spacing-lg);
-      max-width: 700px;
-      width: 100%;
-      box-shadow: var(--shadow-lg);
-      position: relative;
-      max-height: 90vh;
-      overflow-y: auto;
+      border-radius: var(--border-radius);
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s;
     }
 
     .modal-header {
+      background: var(--color-primary);
+      color: var(--color-white);
+      padding: var(--spacing-md);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: var(--spacing-md);
     }
 
-    .modal-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--color-primary);
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
     }
 
     .modal-close {
-      background: none;
+      background: transparent;
       border: none;
-      font-size: 1.5rem;
+      color: var(--color-white);
+      font-size: 2rem;
       cursor: pointer;
-      color: var(--color-text);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: var(--transition);
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     .modal-body {
-      display: grid;
-      gap: var(--spacing-sm);
+      padding: var(--spacing-lg);
+      max-height: calc(80vh - 80px);
+      overflow-y: auto;
     }
 
-    .modal-item {
-      display: flex;
-      flex-direction: column;
-      background: var(--color-gray-light);
-      padding: var(--spacing-sm);
-      border-radius: var(--border-radius);
+    .modal-data-item {
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--color-gray);
     }
 
-    .modal-item strong {
+    .modal-data-item:last-child {
+      border-bottom: none;
+    }
+
+    .modal-data-label {
+      font-weight: 600;
       color: var(--color-primary);
-      margin-bottom: 4px;
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+    }
+
+    .modal-data-value {
+      font-size: 1rem;
+      color: var(--color-text);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
 
     @media (max-width: 1024px) {
@@ -835,7 +861,6 @@
               <input type="text" id="search-inscription" placeholder="Buscar por nome, email...">
             </div>
             <button class="btn btn-secondary" id="export-inscriptions">📥 Exportar CSV</button>
-            <button class="btn btn-danger" id="clear-inscriptions">🗑️ Limpar Tudo</button>
           </div>
           
           <!-- Lista de Inscrições -->
@@ -845,8 +870,8 @@
                 <tr>
                   <th>#</th>
                   <th>Data</th>
+                  <th>Nome</th>
                   <th>Página</th>
-                  <th>Detalhes</th>
                   <th>Status</th>
                   <th>Ações</th>
                 </tr>
@@ -859,6 +884,19 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Modal de Detalhes da Inscrição -->
+      <div class="modal" id="inscription-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>📋 Detalhes da Inscrição</h3>
+            <button class="modal-close" id="close-modal">×</button>
+          </div>
+          <div class="modal-body" id="modal-body">
+            <!-- Conteúdo será preenchido dinamicamente -->
           </div>
         </div>
       </div>
@@ -895,26 +933,14 @@
 
     <!-- Preview (Direita) -->
     <div class="admin-preview">
+      <div class="preview-label" id="preview-label">Preview da Home</div>
       <div class="preview-container">
         <iframe id="preview-frame" src="/index.html?preview=1"></iframe>
       </div>
     </div>
   </div>
 
-  <!-- Modal Detalhes Inscrição -->
-  <div class="modal-overlay" id="inscription-modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title">Detalhes da Inscrição</h2>
-        <button class="modal-close" id="close-modal" aria-label="Fechar">×</button>
-      </div>
-      <div class="modal-body" id="modal-body"></div>
-      <div class="btn-group" style="margin-top: var(--spacing-md); justify-content: flex-end;">
-        <button class="btn btn-secondary" id="modal-confirm"></button>
-        <button class="btn btn-danger" id="modal-delete">🗑️ Excluir</button>
-      </div>
-    </div>
-  </div>
+  <input type="file" id="import-file-input" accept=".json" style="display: none;">
   <script src="/assets/js/admin.js"></script>
 </body>
 </html>
