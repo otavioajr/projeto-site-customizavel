@@ -488,7 +488,7 @@ function renderPagesList() {
   container.querySelectorAll('.preview-page').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const slug = e.target.dataset.slug;
-      window.open(`/p/index.html?slug=${slug}`, '_blank');
+      window.open(`/p/#${slug}`, '_blank');
     });
   });
   
@@ -842,9 +842,16 @@ function applyThemeToAdmin(theme) {
 function initPreview() {
   state.previewFrame = document.getElementById('preview-frame');
   
+  // Atualizar preview quando iframe carregar
+  state.previewFrame.addEventListener('load', () => {
+    setTimeout(() => {
+      updatePreview();
+    }, 100);
+  });
+  
   // Auto-slug
   document.getElementById('page-label').addEventListener('input', (e) => {
-    if (!state.editingPageId) {
+    if (!document.getElementById('page-slug').value) {
       document.getElementById('page-slug').value = slugify(e.target.value);
     }
   });
@@ -857,14 +864,13 @@ function initPreview() {
     });
   });
   
-  // Theme color pickers
+  // Theme preview
   const themeInputs = document.querySelectorAll('#section-theme input[type="color"]');
   themeInputs.forEach(input => {
     input.addEventListener('input', () => {
       const theme = {
         primary: document.getElementById('theme-primary').value,
         secondary: document.getElementById('theme-secondary').value,
-        text: document.getElementById('theme-text').value,
         background: document.getElementById('theme-bg').value
       };
       applyThemeToAdmin(theme);
@@ -879,10 +885,13 @@ function updatePreview() {
   const data = collectHomeData();
   
   try {
-    state.previewFrame.contentWindow.postMessage({
-      type: 'UPDATE_HOME_CONTENT',
-      content: data
-    }, '*');
+    // Aguardar iframe carregar se necessário
+    if (state.previewFrame.contentWindow) {
+      state.previewFrame.contentWindow.postMessage({
+        type: 'UPDATE_HOME_CONTENT',
+        content: data
+      }, '*');
+    }
   } catch (e) {
     console.error('Erro ao atualizar preview:', e);
   }
@@ -968,8 +977,8 @@ function loadInscriptions() {
 
 function loadInscriptionsEditor() {
   loadInscriptions();
-  updateInscriptionsStats();
   populatePageFilter();
+  updateInscriptionsStats();
   renderInscriptionsTable();
 }
 
