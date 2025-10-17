@@ -1,249 +1,242 @@
-# Landing Page Dinâmica - Aventuras
+# 🏔️ Landing Page - Aventuras
 
-Landing page responsiva para profissional de esportes de aventura com painel admin completo para edição de conteúdo.
+Landing page dinâmica e editável para profissionais de esportes de aventura com sistema completo de gerenciamento de imagens.
 
-## 🚀 Características
+## ✨ Features Principais
 
-- **Home Editável**: Hero, Sobre, Serviços, Depoimentos, Galeria, Contato
-- **Páginas Dinâmicas**: Links no header que abrem páginas com iframes do Canva
-- **Admin Completo**: Interface intuitiva com preview ao vivo
-- **Tema Customizável**: Cores editáveis via CSS variables
-- **100% Estático**: Deploy direto na Vercel sem SSR
-- **MVP com localStorage**: Funciona completamente offline
+- 🎨 Design moderno e responsivo
+- 🖼️ **Sistema de upload de imagens** (LGPD compliant)
+- 📝 Admin editável sem banco de dados
+- 📄 Páginas dinâmicas com Canva
+- 📋 Formulários de inscrição customizáveis
+- 💳 Sistema de pagamento PIX
+- 📊 Gerenciamento de inscrições
+- 🎨 Temas customizáveis
+- ↺ Sistema de undo/redo
+- 🔍 SEO otimizado
 
-## 📁 Estrutura
+## 🚀 Início Rápido
+
+### Opção 1: Script Automático
+
+```bash
+./start.sh
+```
+
+### Opção 2: Manual
+
+```bash
+# 1. Instalar dependências
+npm install
+
+# 2. Iniciar servidor
+npm start
+
+# 3. Acessar
+# Admin: http://localhost:3000/admin.html
+# Site: http://localhost:3000/
+```
+
+## 🖼️ Sistema de Imagens (NOVO!)
+
+### Como Funciona
+
+1. **Upload** no admin → Salva em `uploads/`
+2. **Copiar nome** do arquivo
+3. **Colar** no campo de imagem da Home
+4. **Salvar** → Imagem aparece automaticamente!
+
+### Vantagens
+
+- 🔒 **Privacidade total** (LGPD)
+- 💾 **Permanente** (não some ao limpar cache)
+- 🌐 **Flexível** (aceita URLs externas também)
+- 📦 **Backup fácil** (copiar pasta uploads/)
+
+## 📁 Estrutura do Projeto
 
 ```
-/
-├── index.html              # Home
-├── admin.html              # Painel Admin (senha: admin123)
-├── p/
-│   └── index.html          # Página interna (Canva iframe)
+projeto-leo/
+├── server.js              ← Servidor Node.js
+├── uploads/               ← Imagens (auto-criada)
 ├── assets/
 │   ├── css/
-│   │   └── styles.css      # Estilos + CSS Variables
+│   │   └── styles.css
 │   └── js/
-│       ├── app.js          # Renderização da Home
-│       ├── page.js         # Renderização páginas internas
-│       └── admin.js        # CRUD Admin + Preview
+│       ├── admin.js       ← Painel admin
+│       ├── app.js         ← Renderização
+│       └── confirmacao.js
+├── admin.html             ← Painel de controle
+├── index.html             ← Página principal
 ├── package.json
-└── README.md
+└── start.sh               ← Script de inicialização
 ```
 
-## 🛠️ Desenvolvimento Local
+## 📚 Documentação
 
-### Pré-requisitos
-- Node.js instalado
+### 📖 Guias de Uso
 
-### Instalação e Execução
+- **`COMO_USAR_IMAGENS.md`** - Guia rápido de imagens
+- **`GUIA_RAPIDO_IMAGENS.md`** - Tutorial para leigos
+- **`MANUAL_USUARIO.md`** - Manual completo do usuário
+
+### 🔧 Documentação Técnica
+
+- **`INSTALACAO_SERVIDOR.md`** - Setup do servidor
+- **`RESUMO_FINAL_IMAGENS.md`** - Detalhes da implementação
+- **`IMPLEMENTACAO.md`** - Arquitetura do sistema
+- **`MELHORIAS_ADMIN.md`** - Changelog das melhorias
+
+## 🎯 Como Usar o Admin
+
+### 1. Acessar
+
+```
+http://localhost:3000/admin.html
+Senha: admin123
+```
+
+### 2. Funcionalidades
+
+- **Home**: Editar hero, sobre, serviços, galeria
+- **Páginas**: Criar páginas com Canva ou formulários
+- **Imagens**: Fazer upload de fotos (LGPD)
+- **Inscrições**: Gerenciar inscrições de formulários
+- **Tema**: Customizar cores
+
+### 3. Upload de Imagens
+
+1. Aba "Imagens" → Upload
+2. Copiar nome do arquivo
+3. Colar no campo desejado
+4. Salvar
+
+## 📦 Tecnologias
+
+### Frontend
+
+- HTML5, CSS3, JavaScript puro
+- LocalStorage para configurações
+- Sistema de preview em tempo real
+
+### Backend
+
+- Node.js + Express
+- Multer (upload de arquivos)
+- Sharp (processamento de imagens)
+- CORS habilitado
+
+## 🌐 Deploy em Produção
+
+### VPS (Recomendado)
 
 ```bash
 # Instalar dependências
-npm install
+npm install --production
 
-# Rodar servidor local
-npm run dev
+# Usar PM2
+npm install -g pm2
+pm2 start server.js
+pm2 save
 ```
 
-Acesse:
-- Home: http://localhost:3000
-- Admin: http://localhost:3000/admin.html (senha: `admin123`)
-
-## 🎨 Admin
-
-### Acesso
-- URL: `/admin.html`
-- Senha padrão: `admin123`
-- **Não aparece no menu** (oculto)
-
-### Funcionalidades
-
-#### 1. Home (Conteúdo Editável)
-- **Hero**: título, subtítulo, CTA, imagem de fundo
-- **Sobre**: título, texto, imagem
-- **Serviços**: até 3 cards com título, texto e ícone
-- **Depoimentos**: lista de depoimentos
-- **Galeria**: até 6 imagens
-- **Contato**: WhatsApp, email, Instagram, localização
-- **SEO**: title e description
-
-#### 2. Páginas do Menu
-- Adicionar/editar/remover páginas
-- Cada página tem:
-  - Label (nome no menu)
-  - Slug (URL)
-  - URL do Canva (embed)
-  - Ordem de exibição
-  - Status (ativo/inativo)
-  - SEO (title e description)
-
-#### 3. Tema
-- 4 cores customizáveis:
-  - Primária
-  - Secundária
-  - Texto
-  - Fundo
-- Preview em tempo real
-
-### Preview Ao Vivo
-- Coluna direita mostra preview da Home
-- Atualização automática ao editar campos
-- Destaque visual da seção sendo editada
-
-### Ações Disponíveis
-- **Salvar**: grava no localStorage
-- **Reverter**: desfaz alterações não salvas
-- **Exportar JSON**: backup do conteúdo
-- **Importar JSON**: restaurar de backup
-
-## 🌐 Deploy na Vercel
-
-### Opção 1: Via CLI
+### Heroku
 
 ```bash
-# Instalar Vercel CLI
-npm i -g vercel
+# Criar Procfile
+echo "web: node server.js" > Procfile
 
 # Deploy
-vercel --prod
+git push heroku main
 ```
 
-### Opção 2: Via GitHub
+### Vercel
 
-1. Push para repositório GitHub
-2. Importar projeto na Vercel
-3. Deploy automático
+⚠️ Vercel é serverless - precisa integrar com Vercel Blob ou Cloudinary para uploads.
 
-### Configuração (opcional)
+## 🔒 Segurança
 
-Criar `vercel.json` para headers customizados:
+### Implementado
 
-```json
-{
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=3600"
-        }
-      ]
-    }
-  ]
-}
+- ✅ Validação de arquivos (tipo, tamanho)
+- ✅ Sanitização de nomes
+- ✅ CORS configurado
+- ✅ Pasta uploads isolada
+- ✅ Limite de 5MB por imagem
+
+### Para Produção
+
+- 🔐 Alterar senha do admin
+- 🔐 Configurar HTTPS
+- 🔐 Rate limiting
+- 🔐 Backup automático
+
+## 💾 Backup
+
+### Imagens
+
+```bash
+# Backup
+cp -r uploads/ backup-uploads-$(date +%Y%m%d)/
+
+# Restaurar
+cp -r backup-uploads-20251008/* uploads/
 ```
 
-## 📊 Dados
+### Configurações
 
-### Persistência MVP
-- **localStorage**: `home_content` e `pages`
-- Funciona completamente offline
-- Dados persistem no navegador
-
-### Estrutura de Dados
-
-#### home_content
-```json
-{
-  "hero": { "title": "...", "subtitle": "...", ... },
-  "about": { "title": "...", "text": "...", ... },
-  "services": [...],
-  "testimonials": [...],
-  "gallery": { "image_urls": [...] },
-  "theme": { "primary": "#0E7C7B", ... },
-  "seo": { "title": "...", "description": "..." },
-  "contact": { "whatsapp": "...", ... }
-}
-```
-
-#### pages
-```json
-[
-  {
-    "id": "uuid",
-    "label": "Roteiros",
-    "slug": "roteiros",
-    "order": 1,
-    "is_active": true,
-    "canva_embed_url": "https://www.canva.com/design/...",
-    "seo_title": "...",
-    "seo_description": "..."
-  }
-]
-```
-
-## 🔐 Segurança
-
-### MVP
-- Senha simples via `prompt()`
-- Armazenada no localStorage
-- Senha padrão: `admin123`
-
-### Produção (Supabase - Fase 2)
-- Autenticação via Supabase Auth
-- Magic link ou email/senha
-- RLS (Row Level Security)
-- Leitura pública, escrita restrita
-
-## 🎯 Rotas
-
-- `/` → Home
-- `/admin.html` → Admin (oculto)
-- `/p/index.html?slug={slug}` → Página interna (Canva)
-
-## 🔄 Próximos Passos (Fase Produção)
-
-1. **Integração Supabase**
-   - Criar projeto no Supabase
-   - Configurar tabelas `pages` e `home_content`
-   - Implementar Auth
-   - Configurar RLS
-
-2. **Melhorias**
-   - Upload de imagens via Supabase Storage
-   - Versionamento de conteúdo
-   - Múltiplos usuários admin
-   - Analytics
-
-## 📝 Notas
-
-- Imagens devem ser URLs públicas (Unsplash, Canva, Cloudinary, etc.)
-- URLs do Canva devem começar com `https://www.canva.com/`
-- Slugs são únicos e auto-gerados a partir do label
-- Máximo de 3 serviços e 6 imagens na galeria
+As configurações ficam no localStorage. Use as funções de exportar/importar JSON no admin.
 
 ## 🐛 Troubleshooting
 
-### Preview não atualiza
-- Verifique se o iframe carrega corretamente
-- Limpe o cache do navegador
-- Recarregue a página do admin
+### Servidor não inicia
 
-### Dados não salvam
-- Verifique se localStorage está habilitado
-- Limpe o localStorage e tente novamente
-- Use modo anônimo para testar
+```bash
+# Verificar porta
+lsof -i :3000
 
-### Página interna não carrega
-- Verifique se a URL do Canva é válida
-- Confirme que a página está ativa
-- Teste a URL do Canva diretamente
+# Instalar dependências
+npm install
 
-## 📚 Documentação Completa
+# Verificar Node.js
+node -v  # Deve ser 14+
+```
 
-Este projeto possui documentação extensa e organizada:
+### Imagens não aparecem
 
-- **[INDICE_DOCUMENTACAO.md](INDICE_DOCUMENTACAO.md)** - Índice de toda documentação
-- **[IMPLEMENTACAO.md](IMPLEMENTACAO.md)** - Detalhes técnicos da implementação
-- **[DEPLOY.md](DEPLOY.md)** - Guia completo de deploy
-- **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)** - Integração com Supabase
-- **[MANUAL_USUARIO.md](MANUAL_USUARIO.md)** - Manual para o cliente
-- **[RESUMO_EXECUTIVO.md](RESUMO_EXECUTIVO.md)** - Overview do projeto
-- **[COMANDOS_UTEIS.md](COMANDOS_UTEIS.md)** - Referência rápida de comandos
+1. ✅ Servidor rodando?
+2. ✅ Pasta uploads/ existe?
+3. ✅ Nome copiado corretamente?
+4. ✅ Salvou a Home?
 
-**Não sabe por onde começar?** Leia o [INDICE_DOCUMENTACAO.md](INDICE_DOCUMENTACAO.md)
+## 📊 Requisitos
+
+- Node.js 14+
+- npm ou yarn
+- ~50MB de espaço em disco
+- Navegador moderno
+
+## 🎉 Changelog
+
+### v2.0 (2025-10-08)
+
+- ✅ Sistema de upload de imagens
+- ✅ Servidor Node.js
+- ✅ API REST para imagens
+- ✅ Armazenamento permanente
+- ✅ Documentação completa
+
+### v1.0 (2025-10-07)
+
+- ✅ Landing page inicial
+- ✅ Admin editável
+- ✅ Sistema de formulários
+- ✅ Integração PIX
 
 ## 📄 Licença
 
 MIT
+
+---
+
+**Desenvolvido com ❤️ para profissionais de aventura**

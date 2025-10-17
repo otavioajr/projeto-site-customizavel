@@ -184,11 +184,17 @@ function handleFormSubmit(form, config, page) {
   data['_data_envio'] = new Date().toLocaleString('pt-BR');
   
   // Salvar no localStorage (histórico de inscrições)
-  saveInscription(page.slug, data);
+  const inscriptionId = saveInscription(page.slug, data);
   
-  // Mostrar mensagem de sucesso
-  form.style.display = 'none';
-  document.getElementById('form-success').style.display = 'block';
+  // Redirecionar para página de confirmação
+  if (inscriptionId) {
+    // Usar rota sem .html para evitar problemas com o servidor serve
+    window.location.href = `/confirmacao?id=${inscriptionId}&page=${page.slug}`;
+  } else {
+    // Fallback: mostrar mensagem de sucesso
+    form.style.display = 'none';
+    document.getElementById('form-success').style.display = 'block';
+  }
 }
 
 // Salvar inscrição no localStorage
@@ -199,8 +205,10 @@ function saveInscription(pageSlug, data) {
     inscriptions[pageSlug] = [];
   }
   
+  const inscriptionId = Date.now();
+  
   inscriptions[pageSlug].push({
-    id: Date.now(),
+    id: inscriptionId,
     data: data,
     timestamp: new Date().toISOString(),
     status: 'pending' // pending ou confirmed
@@ -210,6 +218,8 @@ function saveInscription(pageSlug, data) {
   
   console.log('✅ Inscrição salva:', data);
   console.log('📊 Gerencie em: /admin.html → Aba Inscrições');
+  
+  return inscriptionId;
 }
 
 // Mostrar página não encontrada

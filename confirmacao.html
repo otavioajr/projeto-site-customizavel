@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscrição Realizada</title>
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <style>
+    .confirmation-container {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0E7C7B 0%, #2A9D8F 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-md);
+    }
+
+    .confirmation-card {
+      background: white;
+      border-radius: 12px;
+      max-width: 480px;
+      width: 100%;
+      padding: var(--spacing-md);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .confirmation-header {
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .confirmation-icon {
+      width: 56px;
+      height: 56px;
+      background: #48BB78;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--spacing-sm);
+      font-size: 1.75rem;
+      color: white;
+      animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .confirmation-title {
+      color: var(--color-primary);
+      font-size: 1.25rem;
+      margin-bottom: var(--spacing-sm);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .confirmation-subtitle {
+      color: #4A5568;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      max-width: 420px;
+      margin: 0 auto var(--spacing-sm);
+    }
+
+    .alert-box {
+      background: #E6FFFA;
+      border: 1px solid #81E6D9;
+      padding: var(--spacing-md);
+      border-radius: 10px;
+      margin-bottom: var(--spacing-md);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #285E61;
+    }
+
+    .alert-box strong {
+      font-weight: 600;
+      color: #2C7A7B;
+    }
+
+    .inscription-number {
+      background: #F7FAFC;
+      border: 1px solid #E2E8F0;
+      padding: var(--spacing-sm);
+      border-radius: 12px;
+      text-align: center;
+      margin: var(--spacing-md) auto;
+      max-width: 360px;
+    }
+
+    .inscription-number-label {
+      font-size: 0.75rem;
+      color: #4A5568;
+      margin-bottom: var(--spacing-xs);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+    }
+
+    .inscription-number-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin: var(--spacing-xs) 0;
+      letter-spacing: 0.5px;
+    }
+
+    .inscription-name {
+      font-size: 0.95rem;
+      color: #4A5568;
+      margin-top: var(--spacing-xs);
+      font-weight: 600;
+    }
+
+    .payment-section {
+      margin-top: var(--spacing-md);
+    }
+
+    .payment-title {
+      font-size: 1.2rem;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-md);
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .payment-summary {
+      background: #F7FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: var(--spacing-sm);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+      align-items: center;
+      text-align: center;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .payment-summary span {
+      font-size: 0.85rem;
+      color: #4A5568;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .payment-summary strong {
+      font-size: 1.5rem;
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+
+    .payment-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .qr-code-container {
+      text-align: center;
+      background: white;
+      padding: var(--spacing-md);
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.05);
+    }
+
+    .qr-code-title {
+      font-size: 0.85rem;
+      color: #2D3748;
+      margin-bottom: var(--spacing-sm);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .qr-code-image {
+      max-width: 200px;
+      width: 100%;
+      margin: 0 auto var(--spacing-sm);
+      border-radius: 8px;
+      padding: var(--spacing-xs);
+      background: #F7FAFC;
+    }
+
+    .qr-code-hint {
+      font-size: 0.75rem;
+      color: #718096;
+      line-height: 1.4;
+    }
+
+    .pix-key-container {
+      background: white;
+      padding: var(--spacing-md);
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      box-shadow: 0 2px 6px rgba(15, 118, 110, 0.05);
+    }
+
+    .pix-key-title {
+      font-size: 0.85rem;
+      color: #2D3748;
+      margin-bottom: var(--spacing-sm);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      text-align: center;
+    }
+
+    .pix-key-value {
+      background: #F7FAFC;
+      padding: var(--spacing-sm);
+      border-radius: 8px;
+      word-break: break-all;
+      font-family: 'Courier New', monospace;
+      font-size: 0.75rem;
+      margin-bottom: var(--spacing-md);
+      border: 1px dashed #CBD5E0;
+      color: #2D3748;
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .copy-button {
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 3px 10px rgba(14, 124, 123, 0.25);
+    }
+
+    .copy-button:hover {
+      background: var(--color-secondary);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(14, 124, 123, 0.3);
+    }
+
+    .copy-button:active {
+      transform: translateY(0);
+    }
+
+    .copy-button.copied {
+      background: #48BB78;
+      box-shadow: 0 2px 8px rgba(72, 187, 120, 0.2);
+    }
+
+    .copy-button.copied::before {
+      content: '✓ ';
+    }
+
+    .whatsapp-section {
+      background: linear-gradient(135deg, #E6FFFA 0%, #B2F5EA 100%);
+      padding: var(--spacing-lg);
+      border-radius: 12px;
+      text-align: center;
+      margin-top: var(--spacing-lg);
+      border: 1px solid #81E6D9;
+    }
+
+    .whatsapp-title {
+      font-size: 0.95rem;
+      color: var(--color-text);
+      margin-bottom: var(--spacing-xs);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    .whatsapp-subtitle {
+      font-size: 0.8rem;
+      color: #718096;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .whatsapp-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: #25D366;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+      letter-spacing: 0.3px;
+      box-shadow: 0 2px 8px rgba(37, 211, 102, 0.2);
+    }
+
+    .whatsapp-button:hover {
+      background: #128C7E;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+    }
+
+    .whatsapp-button:active {
+      transform: translateY(0);
+    }
+
+
+    .back-button {
+      display: inline-block;
+      text-align: center;
+      margin-top: var(--spacing-md);
+      padding: var(--spacing-xs) var(--spacing-md);
+      color: #718096;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      border: 1px solid #CBD5E0;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .back-button:hover {
+      background: #F7FAFC;
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    /* Tablet e Desktop - Mobile First */
+    @media (min-width: 640px) {
+      .payment-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .confirmation-card {
+        padding: var(--spacing-md);
+        max-width: 640px;
+        border-radius: 16px;
+      }
+
+      .confirmation-icon {
+        width: 64px;
+        height: 64px;
+        font-size: 2rem;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .confirmation-title {
+        font-size: 1.5rem;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .confirmation-subtitle {
+        font-size: 0.95rem;
+        max-width: 420px;
+      }
+
+      .inscription-number-value {
+        font-size: 2rem;
+        letter-spacing: 1px;
+      }
+
+      .inscription-name {
+        font-size: 1rem;
+        margin-top: var(--spacing-sm);
+      }
+
+      .payment-title {
+        font-size: 1.25rem;
+      }
+
+      .payment-summary {
+        flex-direction: row;
+        justify-content: center;
+        gap: 1rem;
+      }
+
+      .payment-summary strong {
+        font-size: 1.65rem;
+      }
+
+      .payment-grid {
+        gap: 1rem;
+      }
+
+      .qr-code-image {
+        max-width: 200px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .confirmation-card {
+        max-width: 760px;
+        padding: 2rem;
+      }
+
+      .confirmation-icon {
+        width: 72px;
+        height: 72px;
+        font-size: 2.25rem;
+      }
+
+      .confirmation-title {
+        font-size: 1.75rem;
+      }
+
+      .inscription-number-value {
+        font-size: 2.25rem;
+      }
+
+      .payment-summary strong {
+        font-size: 1.85rem;
+      }
+
+      .payment-grid {
+        gap: 1.25rem;
+      }
+
+      .qr-code-image {
+        max-width: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="confirmation-container">
+    <div class="confirmation-card">
+      <div class="confirmation-header">
+        <div class="confirmation-icon">✓</div>
+        <h1 class="confirmation-title">INSCRIÇÃO REALIZADA</h1>
+        <p class="confirmation-subtitle" id="subtitle-text">Guarde o número da sua inscrição para participar do sorteio no dia do festival</p>
+      </div>
+
+      <!-- Alerta Importante -->
+      <div class="alert-box" id="alert-box" style="display: none;">
+        <strong>Importante:</strong> A inscrição só é realizada mediante ao pagamento, aguarde a confirmação.
+      </div>
+
+      <div class="inscription-number">
+        <div class="inscription-number-label">NÚMERO DE INSCRIÇÃO</div>
+        <p class="inscription-number-value" id="inscription-id">-</p>
+        <p class="inscription-name" id="inscription-name">-</p>
+      </div>
+
+      <!-- Seção de Pagamento (aparece apenas se requer pagamento) -->
+      <div class="payment-section" id="payment-section" style="display: none;">
+        <h2 class="payment-title">Pagamento via PIX</h2>
+
+        <div class="payment-grid">
+          <div class="qr-code-container">
+            <h3 class="qr-code-title">QR Code PIX</h3>
+            <img id="qr-code-image" class="qr-code-image" alt="QR Code PIX">
+            <p class="qr-code-hint">Escaneie o código com seu app de pagamento</p>
+          </div>
+
+          <div class="pix-key-container">
+            <h3 class="pix-key-title">PIX Copia e Cola</h3>
+            <div class="pix-key-value" id="pix-key-value">-</div>
+            <button class="copy-button" id="copy-button">Copiar Código PIX</button>
+          </div>
+        </div>
+
+        <!-- WhatsApp para cartão (se configurado) -->
+        <div class="whatsapp-section" id="whatsapp-section" style="display: none;">
+          <h3 class="whatsapp-title">💳 Pagamento com Cartão de Crédito</h3>
+          <p class="whatsapp-subtitle">Chame no WhatsApp para pagar no crédito</p>
+          <a href="#" id="whatsapp-link" class="whatsapp-button" target="_blank">
+            <span>📱</span> CHAMAR NO WHATSAPP
+          </a>
+          <p class="whatsapp-subtitle" style="margin-top: var(--spacing-md); font-size: 0.8rem;">Solicitar link do cartão</p>
+        </div>
+      </div>
+
+      <div style="text-align: center;">
+        <a href="/" class="back-button">← Voltar à Home</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/confirmacao.js"></script>
+</body>
+</html>

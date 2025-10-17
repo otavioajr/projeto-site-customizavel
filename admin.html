@@ -113,6 +113,21 @@
       font-size: 0.875rem;
       color: var(--color-gray-dark);
       margin-top: 4px;
+      line-height: 1.4;
+      background: #f8f9fa;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border-left: 3px solid var(--color-primary);
+    }
+    
+    .form-hint a {
+      color: var(--color-primary);
+      text-decoration: underline;
+      font-weight: 600;
+    }
+    
+    .form-hint a:hover {
+      color: var(--color-secondary);
     }
 
     .form-group input[type="text"],
@@ -600,6 +615,140 @@
       }
     }
 
+    /* Images Section */
+    .images-upload-area {
+      border: 2px dashed var(--color-primary);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-lg);
+      text-align: center;
+      background: var(--color-gray-light);
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .images-upload-area:hover {
+      background: var(--color-white);
+      border-color: var(--color-secondary);
+    }
+
+    .images-upload-area.dragover {
+      background: var(--color-white);
+      border-color: var(--color-secondary);
+      transform: scale(1.02);
+    }
+
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .image-card {
+      background: var(--color-white);
+      border-radius: var(--border-radius);
+      padding: var(--spacing-sm);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .image-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .image-preview {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-xs);
+      background: var(--color-gray-light);
+    }
+
+    .image-name {
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--spacing-xs);
+      word-break: break-all;
+      font-size: 0.875rem;
+    }
+
+    .image-info {
+      font-size: 0.75rem;
+      color: var(--color-gray-dark);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .image-actions {
+      display: flex;
+      gap: var(--spacing-xs);
+    }
+
+    .copy-name-btn {
+      flex: 1;
+      padding: var(--spacing-xs);
+      background: var(--color-primary);
+      color: var(--color-white);
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: var(--transition);
+    }
+
+    .copy-name-btn:hover {
+      background: var(--color-secondary);
+    }
+
+    .delete-image-btn {
+      padding: var(--spacing-xs) var(--spacing-sm);
+      background: #E53E3E;
+      color: var(--color-white);
+      border: none;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: var(--transition);
+    }
+
+    .delete-image-btn:hover {
+      background: #C53030;
+    }
+
+    .images-info-box {
+      background: #E6F7FF;
+      border-left: 4px solid #1890FF;
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .images-info-box h4 {
+      margin: 0 0 var(--spacing-xs) 0;
+      color: #1890FF;
+    }
+
+    .images-info-box p {
+      margin: var(--spacing-xs) 0;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
+    .images-info-box code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      color: #C41D7F;
+    }
+
     @media (max-width: 1024px) {
       .admin-container {
         grid-template-columns: 1fr;
@@ -608,6 +757,10 @@
       .admin-preview {
         position: relative;
         height: 600px;
+      }
+
+      .images-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       }
     }
   </style>
@@ -629,6 +782,7 @@
         <button class="admin-tab active" data-tab="home">Home</button>
         <button class="admin-tab" data-tab="pages">Páginas</button>
         <button class="admin-tab" data-tab="inscriptions">Inscrições</button>
+        <button class="admin-tab" data-tab="images">Imagens</button>
         <button class="admin-tab" data-tab="theme">Tema</button>
       </div>
 
@@ -638,26 +792,29 @@
         <div class="subsection">
           <h3 class="subsection-title">Hero</h3>
           <div class="form-group">
-            <label for="hero-title">Título</label>
+            <label for="hero-title">Título <span style="color: red;">*</span></label>
             <input type="text" id="hero-title" placeholder="Viva a aventura com segurança">
+            <span class="form-hint">📝 Texto principal que aparece no topo da página (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="hero-subtitle">Subtítulo</label>
+            <label for="hero-subtitle">Subtítulo <span style="color: red;">*</span></label>
             <textarea id="hero-subtitle" placeholder="Guias certificados..."></textarea>
+            <span class="form-hint">📝 Descrição complementar abaixo do título (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="hero-cta-label">Texto do Botão</label>
+            <label for="hero-cta-label">Texto do Botão <span style="color: red;">*</span></label>
             <input type="text" id="hero-cta-label" placeholder="Agendar Agora">
+            <span class="form-hint">📝 Texto que aparece no botão principal (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="hero-cta-link">Link do Botão</label>
+            <label for="hero-cta-link">Link do Botão <span style="color: red;">*</span></label>
             <input type="text" id="hero-cta-link" placeholder="#contato">
-            <span class="form-hint">Ex: #contato ou https://...</span>
+            <span class="form-hint">🔗 Para seções da página use #contato, #sobre, etc. Para links externos use https://... (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="hero-bg">URL da Imagem de Fundo</label>
-            <input type="url" id="hero-bg" placeholder="https://...">
-            <span class="form-hint">URL pública de imagem (https://...)</span>
+            <label for="hero-bg">URL da Imagem de Fundo <span style="color: red;">*</span></label>
+            <input type="url" id="hero-bg" placeholder="https://... ou nome-da-imagem.jpg">
+            <span class="form-hint">🖼️ <strong>Tamanho recomendado: 1920x1080px</strong> | <strong>Opção 1:</strong> Cole uma URL de <a href="https://unsplash.com" target="_blank">Unsplash</a>, <a href="https://imgur.com" target="_blank">Imgur</a> ou <a href="https://postimages.org" target="_blank">PostImages</a> | <strong>Opção 2 (LGPD):</strong> Vá na aba "Imagens", faça upload e cole o nome exato da imagem aqui (obrigatório)</span>
           </div>
         </div>
 
@@ -665,17 +822,19 @@
         <div class="subsection">
           <h3 class="subsection-title">Sobre</h3>
           <div class="form-group">
-            <label for="about-title">Título</label>
+            <label for="about-title">Título <span style="color: red;">*</span></label>
             <input type="text" id="about-title" placeholder="Sobre mim">
+            <span class="form-hint">📝 Título da seção "Sobre" (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="about-text">Texto</label>
+            <label for="about-text">Texto <span style="color: red;">*</span></label>
             <textarea id="about-text" placeholder="Sou guia de montanha..."></textarea>
+            <span class="form-hint">📝 Conte sua história, experiência e missão (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="about-image">URL da Imagem</label>
-            <input type="url" id="about-image" placeholder="https://...">
-            <span class="form-hint">URL pública de imagem (https://...)</span>
+            <label for="about-image">URL da Imagem <span style="color: red;">*</span></label>
+            <input type="url" id="about-image" placeholder="https://... ou nome-da-imagem.jpg">
+            <span class="form-hint">🖼️ <strong>Tamanho recomendado: 600x600px (quadrada)</strong> | <strong>Opção 1:</strong> Cole uma URL de <a href="https://unsplash.com" target="_blank">Unsplash</a>, <a href="https://imgur.com" target="_blank">Imgur</a> ou <a href="https://postimages.org" target="_blank">PostImages</a> | <strong>Opção 2 (LGPD):</strong> Vá na aba "Imagens", faça upload e cole o nome exato da imagem aqui (obrigatório)</span>
           </div>
         </div>
 
@@ -704,20 +863,24 @@
         <div class="subsection">
           <h3 class="subsection-title">Contato</h3>
           <div class="form-group">
-            <label for="contact-whatsapp">WhatsApp (link)</label>
+            <label for="contact-whatsapp">WhatsApp (link) <span style="color: red;">*</span></label>
             <input type="url" id="contact-whatsapp" placeholder="https://wa.me/5511999999999">
+            <span class="form-hint">📱 Formato: https://wa.me/55 + DDD + número (sem espaços ou traços) - obrigatório</span>
           </div>
           <div class="form-group">
-            <label for="contact-email">Email</label>
+            <label for="contact-email">Email <span style="color: red;">*</span></label>
             <input type="email" id="contact-email" placeholder="contato@aventura.com">
+            <span class="form-hint">📧 Email para contato (obrigatório)</span>
           </div>
           <div class="form-group">
             <label for="contact-instagram">Instagram (link)</label>
             <input type="url" id="contact-instagram" placeholder="https://instagram.com/...">
+            <span class="form-hint">📷 Link completo do perfil no Instagram (opcional)</span>
           </div>
           <div class="form-group">
-            <label for="contact-location">Localização</label>
+            <label for="contact-location">Localização <span style="color: red;">*</span></label>
             <input type="text" id="contact-location" placeholder="São Paulo, Brasil">
+            <span class="form-hint">📍 Cidade e estado onde você atua (obrigatório)</span>
           </div>
         </div>
 
@@ -725,19 +888,21 @@
         <div class="subsection">
           <h3 class="subsection-title">SEO</h3>
           <div class="form-group">
-            <label for="seo-title">Título da Página</label>
+            <label for="seo-title">Título da Página <span style="color: red;">*</span></label>
             <input type="text" id="seo-title" placeholder="Aventuras Guiadas com Segurança">
+            <span class="form-hint">🔍 Aparece na aba do navegador e no Google (máx. 60 caracteres) - obrigatório</span>
           </div>
           <div class="form-group">
-            <label for="seo-description">Descrição</label>
+            <label for="seo-description">Descrição <span style="color: red;">*</span></label>
             <textarea id="seo-description" placeholder="Trilhas, escalada e mergulho..."></textarea>
-            <span class="form-hint">Máx. 160 caracteres</span>
+            <span class="form-hint">🔍 Aparece nos resultados do Google (máx. 160 caracteres) - obrigatório</span>
           </div>
         </div>
 
         <div class="btn-group">
           <button class="btn btn-primary" id="save-home">💾 Salvar Home</button>
-          <button class="btn btn-secondary" id="revert-home">↺ Reverter</button>
+          <button class="btn btn-secondary" id="revert-home" title="Desfazer última alteração">↺ Desfazer</button>
+          <button class="btn btn-secondary" id="restore-default-home" title="Restaurar configurações padrão do site">🔄 Restaurar Padrão</button>
           <button class="btn btn-secondary" id="export-home">📥 Exportar JSON</button>
           <button class="btn btn-secondary" id="import-home">📤 Importar JSON</button>
         </div>
@@ -755,13 +920,14 @@
         <div class="subsection" id="page-form" style="display: none;">
           <h3 class="subsection-title" id="page-form-title">Nova Página</h3>
           <div class="form-group">
-            <label for="page-label">Label (nome no menu)</label>
+            <label for="page-label">Label (nome no menu) <span style="color: red;">*</span></label>
             <input type="text" id="page-label" placeholder="Roteiros">
+            <span class="form-hint">📝 Nome que aparecerá no menu de navegação (obrigatório)</span>
           </div>
           <div class="form-group">
-            <label for="page-slug">Slug (URL)</label>
+            <label for="page-slug">Slug (URL) <span style="color: red;">*</span></label>
             <input type="text" id="page-slug" placeholder="roteiros">
-            <span class="form-hint">Apenas letras minúsculas, números e hífens</span>
+            <span class="form-hint">🔗 Endereço da página (ex: roteiros → site.com/p/#roteiros) - apenas letras minúsculas, números e hífens (obrigatório)</span>
           </div>
           <div class="form-group">
             <label>
@@ -773,22 +939,48 @@
           <!-- Campos do Canva (aparecem quando NÃO é formulário) -->
           <div id="canva-fields">
             <div class="form-group">
-              <label for="page-canva-url">URL do Canva (embed)</label>
+              <label for="page-canva-url">URL do Canva (embed) <span style="color: red;">*</span></label>
               <input type="url" id="page-canva-url" placeholder="https://www.canva.com/design/...">
-              <span class="form-hint">Deve começar com https://www.canva.com/</span>
+              <span class="form-hint">🎨 <strong>Como obter:</strong> No Canva, clique em "Compartilhar" → "Mais" → "Incorporar" → Copie o link que aparece. Deve começar com https://www.canva.com/ (obrigatório)</span>
             </div>
           </div>
           
           <!-- Campos do Formulário (aparecem quando É formulário) -->
           <div id="form-fields" style="display: none;">
             <div class="form-group">
-              <label for="form-title">Título do Formulário</label>
+              <label for="form-title">Título do Formulário <span style="color: red;">*</span></label>
               <input type="text" id="form-title" placeholder="Inscrição para Trilha do Pico">
+              <span class="form-hint">📝 Título que aparece no topo do formulário (obrigatório)</span>
             </div>
             <div class="form-group">
               <label for="form-description">Descrição</label>
               <textarea id="form-description" placeholder="Preencha o formulário abaixo para se inscrever..."></textarea>
-              <span class="form-hint">As inscrições serão gerenciadas na aba "Inscrições" do admin</span>
+              <span class="form-hint">📝 Instruções para quem vai preencher o formulário. As inscrições aparecerão na aba "Inscrições" do admin (opcional)</span>
+            </div>
+            
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="form-requires-payment"> Requer Pagamento (PIX)
+              </label>
+            </div>
+            
+            <!-- Campos de Pagamento (aparecem quando requer pagamento) -->
+            <div id="payment-fields" style="display: none;">
+              <div class="form-group">
+                <label for="payment-value">Valor da Inscrição (R$) <span style="color: red;">*</span></label>
+                <input type="number" id="payment-value" placeholder="300.00" step="0.01" min="0">
+                <span class="form-hint">💰 Valor em reais (ex: 300.00) - obrigatório se pagamento estiver ativado</span>
+              </div>
+              <div class="form-group">
+                <label for="payment-pix-key">Chave PIX (Copia e Cola) <span style="color: red;">*</span></label>
+                <textarea id="payment-pix-key" rows="3" placeholder="00020126580014BR.GOV.BCB.PIX..."></textarea>
+                <span class="form-hint">💳 <strong>Como obter:</strong> Abra seu app bancário → PIX → Receber → Copiar código PIX. Cole aqui o código completo. O QR Code será gerado automaticamente (obrigatório se pagamento estiver ativado)</span>
+              </div>
+              <div class="form-group">
+                <label for="payment-whatsapp">WhatsApp para Pagamento com Cartão</label>
+                <input type="text" id="payment-whatsapp" placeholder="5511999999999">
+                <span class="form-hint">📱 Número para contato sobre pagamento com cartão. Formato: 55 + DDD + número (sem espaços) - Ex: 5511999999999 (opcional)</span>
+              </div>
             </div>
             
             <h4 style="margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm);">Campos do Formulário</h4>
@@ -803,10 +995,12 @@
           <div class="form-group">
             <label for="page-seo-title">SEO - Título</label>
             <input type="text" id="page-seo-title" placeholder="Roteiros de Aventura">
+            <span class="form-hint">🔍 Título que aparece no Google (máx. 60 caracteres) - se vazio, usa o Label da página</span>
           </div>
           <div class="form-group">
             <label for="page-seo-desc">SEO - Descrição</label>
             <textarea id="page-seo-desc" placeholder="Trilhas e expedições guiadas."></textarea>
+            <span class="form-hint">🔍 Descrição que aparece no Google (máx. 160 caracteres) - opcional</span>
           </div>
           <div class="form-group">
             <label>
@@ -901,6 +1095,52 @@
         </div>
       </div>
 
+      <!-- Images Section -->
+      <div class="admin-section" id="section-images">
+        <div class="subsection">
+          <h3 class="subsection-title">📸 Gerenciamento de Imagens</h3>
+          
+          <!-- Info Box -->
+          <div class="images-info-box">
+            <h4>🔒 Privacidade e LGPD</h4>
+            <p><strong>Por que usar esta seção?</strong> Se você não quer hospedar suas imagens em sites públicos por questões de privacidade ou LGPD, pode fazer upload aqui. As imagens ficam armazenadas na pasta <code>uploads/</code> do seu projeto.</p>
+            <p><strong>Como usar:</strong></p>
+            <ol style="margin: var(--spacing-xs) 0; padding-left: 20px;">
+              <li>Faça upload das imagens clicando na área abaixo ou arrastando arquivos</li>
+              <li>Copie o nome da imagem clicando no botão "📋 Copiar Nome"</li>
+              <li>Cole o nome <strong>exatamente como aparece</strong> nos campos de URL da Home (ex: <code>hero-background.jpg</code>)</li>
+              <li>O sistema vai buscar automaticamente a imagem da pasta uploads/</li>
+            </ol>
+            <p><strong>✅ Vantagem:</strong> As imagens ficam salvas permanentemente no projeto, não dependem do navegador!</p>
+          </div>
+
+          <!-- Upload Area -->
+          <div class="images-upload-area" id="upload-area">
+            <div class="upload-icon">📤</div>
+            <h3>Clique ou arraste imagens aqui</h3>
+            <p style="color: var(--color-gray-dark); margin-top: var(--spacing-xs);">
+              Formatos aceitos: JPG, PNG, GIF, WebP | Tamanho máximo: 5MB por imagem
+            </p>
+            <input type="file" id="image-upload-input" accept="image/*" multiple style="display: none;">
+          </div>
+
+          <!-- Images Grid -->
+          <div id="images-container">
+            <h4 style="margin-bottom: var(--spacing-md);">Suas Imagens (<span id="images-count">0</span>)</h4>
+            <div class="images-grid" id="images-grid">
+              <!-- Imagens serão renderizadas aqui -->
+            </div>
+          </div>
+
+          <div class="btn-group" style="margin-top: var(--spacing-md);">
+            <button class="btn btn-danger" id="clear-all-images">🗑️ Limpar Todas as Imagens</button>
+          </div>
+          <p style="margin-top: var(--spacing-sm); font-size: 0.875rem; color: var(--color-gray-dark);">
+            💡 <strong>Dica:</strong> As imagens ficam salvas na pasta <code>uploads/</code> do projeto. Faça backup copiando essa pasta!
+          </p>
+        </div>
+      </div>
+
       <!-- Theme Section -->
       <div class="admin-section" id="section-theme">
         <div class="subsection">
@@ -926,6 +1166,7 @@
           <div class="btn-group">
             <button class="btn btn-primary" id="save-theme">💾 Salvar Tema</button>
             <button class="btn btn-secondary" id="revert-theme">↺ Reverter</button>
+            <button class="btn btn-secondary" id="restore-default-theme" title="Restaurar cores padrão">🔄 Restaurar Padrão</button>
           </div>
         </div>
       </div>

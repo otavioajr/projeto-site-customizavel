@@ -1,5 +1,28 @@
 // app.js - Renderização da Home
 
+// Helpers para buscar imagens locais
+function resolveImageUrl(urlOrName) {
+  if (!urlOrName) return null;
+  
+  // Se começar com http:// ou https://, é uma URL externa
+  if (urlOrName.startsWith('http://') || urlOrName.startsWith('https://')) {
+    return urlOrName;
+  }
+  
+  // Se começar com data:, já é base64
+  if (urlOrName.startsWith('data:')) {
+    return urlOrName;
+  }
+  
+  // Se começar com /, é um caminho absoluto
+  if (urlOrName.startsWith('/')) {
+    return urlOrName;
+  }
+  
+  // Caso contrário, assumir que é um nome de arquivo na pasta uploads
+  return `/uploads/${urlOrName}`;
+}
+
 // Helpers
 function setText(selector, value) {
   const el = document.querySelector(selector);
@@ -13,12 +36,18 @@ function setHref(selector, value) {
 
 function setSrc(selector, value) {
   const el = document.querySelector(selector);
-  if (el && value) el.src = value;
+  if (el && value) {
+    const resolvedUrl = resolveImageUrl(value);
+    el.src = resolvedUrl;
+  }
 }
 
 function setBg(selector, url) {
   const el = document.querySelector(selector);
-  if (el && url) el.style.backgroundImage = `url(${url})`;
+  if (el && url) {
+    const resolvedUrl = resolveImageUrl(url);
+    el.style.backgroundImage = `url(${resolvedUrl})`;
+  }
 }
 
 function applyThemeVars(theme) {
@@ -123,8 +152,9 @@ function renderServices(services) {
   services.slice(0, 3).forEach(service => {
     const card = document.createElement('div');
     card.className = 'service-card';
+    const iconUrl = service.icon_url ? resolveImageUrl(service.icon_url) : null;
     card.innerHTML = `
-      ${service.icon_url ? `<img src="${service.icon_url}" alt="${service.title}" class="service-icon">` : ''}
+      ${iconUrl ? `<img src="${iconUrl}" alt="${service.title}" class="service-icon">` : ''}
       <h3>${service.title || ''}</h3>
       <p>${service.text || ''}</p>
     `;
@@ -158,7 +188,8 @@ function renderGallery(imageUrls) {
   imageUrls.slice(0, 6).forEach(url => {
     const item = document.createElement('div');
     item.className = 'gallery-item';
-    item.innerHTML = `<img src="${url}" alt="Galeria" loading="lazy">`;
+    const resolvedUrl = resolveImageUrl(url);
+    item.innerHTML = `<img src="${resolvedUrl}" alt="Galeria" loading="lazy">`;
     grid.appendChild(item);
   });
 }

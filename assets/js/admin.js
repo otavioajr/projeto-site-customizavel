@@ -8,7 +8,8 @@ const state = {
   previewFrame: null,
   formFields: [],
   inscriptions: {},
-  filteredInscriptions: []
+  filteredInscriptions: [],
+  undoStack: [] // Histórico para desfazer
 };
 
 // ============= HELPERS =============
@@ -224,16 +225,19 @@ function renderServicesList(services) {
     item.innerHTML = `
       <button class="array-item-remove" data-index="${index}">×</button>
       <div class="form-group">
-        <label>Título</label>
+        <label>Título <span style="color: red;">*</span></label>
         <input type="text" class="service-title" value="${service.title || ''}" data-index="${index}">
+        <span class="form-hint">📝 Nome do serviço (obrigatório)</span>
       </div>
       <div class="form-group">
-        <label>Texto</label>
+        <label>Texto <span style="color: red;">*</span></label>
         <textarea class="service-text" data-index="${index}">${service.text || ''}</textarea>
+        <span class="form-hint">📝 Descrição do serviço (obrigatório)</span>
       </div>
       <div class="form-group">
         <label>URL do Ícone</label>
-        <input type="url" class="service-icon" value="${service.icon_url || ''}" data-index="${index}">
+        <input type="url" class="service-icon" value="${service.icon_url || ''}" data-index="${index}" placeholder="https://... ou nome-icone.svg">
+        <span class="form-hint">🎨 <strong>Opção 1:</strong> Use <a href="https://iconify.design" target="_blank">Iconify</a> para gerar ícones SVG | <strong>Opção 2:</strong> Faça upload na aba "Imagens" e cole o nome aqui (opcional)</span>
       </div>
     `;
     container.appendChild(item);
@@ -270,12 +274,14 @@ function renderTestimonialsList(testimonials) {
     item.innerHTML = `
       <button class="array-item-remove" data-index="${index}">×</button>
       <div class="form-group">
-        <label>Nome</label>
+        <label>Nome <span style="color: red;">*</span></label>
         <input type="text" class="testimonial-name" value="${testimonial.name || ''}" data-index="${index}">
+        <span class="form-hint">📝 Nome da pessoa (obrigatório)</span>
       </div>
       <div class="form-group">
-        <label>Depoimento</label>
+        <label>Depoimento <span style="color: red;">*</span></label>
         <textarea class="testimonial-text" data-index="${index}">${testimonial.text || ''}</textarea>
+        <span class="form-hint">📝 Texto do depoimento (obrigatório)</span>
       </div>
     `;
     container.appendChild(item);
@@ -311,8 +317,9 @@ function renderGalleryList(imageUrls) {
     item.innerHTML = `
       <button class="array-item-remove" data-index="${index}">×</button>
       <div class="form-group">
-        <label>URL da Imagem ${index + 1}</label>
-        <input type="url" class="gallery-url" value="${url || ''}" data-index="${index}">
+        <label>URL da Imagem ${index + 1} <span style="color: red;">*</span></label>
+        <input type="url" class="gallery-url" value="${url || ''}" data-index="${index}" placeholder="https://... ou nome-imagem.jpg">
+        <span class="form-hint">🖼️ <strong>Tamanho recomendado: 400x400px</strong> | <strong>Opção 1:</strong> Cole URL de <a href="https://unsplash.com" target="_blank">Unsplash</a>, <a href="https://imgur.com" target="_blank">Imgur</a> ou <a href="https://postimages.org" target="_blank">PostImages</a> | <strong>Opção 2 (LGPD):</strong> Faça upload na aba "Imagens" e cole o nome exato aqui (obrigatório)</span>
       </div>
     `;
     container.appendChild(item);
@@ -377,19 +384,69 @@ function collectHomeData() {
 }
 
 function saveHome() {
+  // Salvar estado atual no histórico antes de salvar
+  saveToUndoStack();
+  
   const data = collectHomeData();
   saveHomeContent(data);
   state.homeContent = data;
   showAlert('Home salva com sucesso!');
-  updatePreview();
+  
+  // Recarregar o preview completamente
+  refreshPreview();
 }
 
 function revertHome() {
-  if (confirm('Deseja reverter todas as alterações?')) {
-    loadHomeEditor();
-    showAlert('Alterações revertidas.');
-    updatePreview();
+  // Desfazer última ação do histórico
+  if (state.undoStack.length === 0) {
+    showAlert('Nenhuma ação para desfazer.', 'error');
+    return;
   }
+  
+  if (confirm('Deseja desfazer a última alteração salva?')) {
+    const previousState = state.undoStack.pop();
+    state.homeContent = previousState;
+    saveHomeContent(previousState);
+    loadHomeEditor();
+    showAlert('Última alteração desfeita.');
+    refreshPreview();
+  }
+}
+
+function restoreDefaultHome() {
+  if (confirm('Deseja restaurar todas as configurações padrão do site? Esta ação não pode ser desfeita.')) {
+    // Salvar estado atual no histórico antes de restaurar
+    saveToUndoStack();
+    
+    // Restaurar conteúdo padrão
+    const defaultContent = getDefaultHomeContent();
+    state.homeContent = defaultContent;
+    saveHomeContent(defaultContent);
+    loadHomeEditor();
+    showAlert('Configurações padrão restauradas com sucesso!');
+    refreshPreview();
+  }
+}
+
+// Salvar estado atual no histórico
+function saveToUndoStack() {
+  const currentState = JSON.parse(JSON.stringify(state.homeContent));
+  state.undoStack.push(currentState);
+  
+  // Manter apenas as últimas 10 ações
+  if (state.undoStack.length > 10) {
+    state.undoStack.shift();
+  }
+}
+
+// Recarregar preview completamente
+function refreshPreview() {
+  if (!state.previewFrame) return;
+  
+  const currentSrc = state.previewFrame.src;
+  // Adicionar timestamp para forçar reload
+  const separator = currentSrc.includes('?') ? '&' : '?';
+  state.previewFrame.src = currentSrc.split('?')[0] + '?preview=1&t=' + Date.now();
 }
 
 function exportHome() {
@@ -519,6 +576,18 @@ function showPageForm(page = null) {
       // Preencher campos do formulário
       document.getElementById('form-title').value = page.form_config?.title || '';
       document.getElementById('form-description').value = page.form_config?.description || '';
+      
+      // Campos de pagamento
+      const requiresPayment = page.form_config?.requires_payment || false;
+      document.getElementById('form-requires-payment').checked = requiresPayment;
+      togglePaymentFields(requiresPayment);
+      
+      if (requiresPayment && page.form_config?.payment) {
+        document.getElementById('payment-value').value = page.form_config.payment.value || '';
+        document.getElementById('payment-pix-key').value = page.form_config.payment.pix_key || '';
+        document.getElementById('payment-whatsapp').value = page.form_config.payment.whatsapp || '';
+      }
+      
       state.formFields = page.form_config?.fields || [];
       renderFormFieldsList();
     } else {
@@ -539,12 +608,17 @@ function showPageForm(page = null) {
     document.getElementById('page-canva-url').value = '';
     document.getElementById('form-title').value = '';
     document.getElementById('form-description').value = '';
+    document.getElementById('form-requires-payment').checked = false;
+    document.getElementById('payment-value').value = '';
+    document.getElementById('payment-pix-key').value = '';
+    document.getElementById('payment-whatsapp').value = '';
     document.getElementById('page-order').value = state.pages.length + 1;
     document.getElementById('page-seo-title').value = '';
     document.getElementById('page-seo-desc').value = '';
     document.getElementById('page-active').checked = true;
     state.formFields = [];
     toggleFormFields(false);
+    togglePaymentFields(false);
     renderFormFieldsList();
   }
   
@@ -564,6 +638,12 @@ function toggleFormFields(isForm) {
     canvaFields.style.display = 'block';
     formFields.style.display = 'none';
   }
+}
+
+// Toggle campos de pagamento
+function togglePaymentFields(requiresPayment) {
+  const paymentFields = document.getElementById('payment-fields');
+  paymentFields.style.display = requiresPayment ? 'block' : 'none';
 }
 
 // Renderizar lista de campos do formulário
@@ -721,6 +801,11 @@ function savePage() {
     return;
   }
   
+  if (!slug) {
+    showAlert('O slug é obrigatório.', 'error');
+    return;
+  }
+  
   // Verificar slug único
   const existingPage = state.pages.find(p => p.slug === slug && p.id !== state.editingPageId);
   if (existingPage) {
@@ -761,11 +846,37 @@ function savePage() {
       return;
     }
     
+    const requiresPayment = document.getElementById('form-requires-payment').checked;
+    
     pageData.form_config = {
       title: formTitle,
       description: formDescription,
-      fields: state.formFields
+      fields: state.formFields,
+      requires_payment: requiresPayment
     };
+    
+    // Se requer pagamento, validar e adicionar dados
+    if (requiresPayment) {
+      const paymentValue = document.getElementById('payment-value').value.trim();
+      const pixKey = document.getElementById('payment-pix-key').value.trim();
+      const whatsapp = document.getElementById('payment-whatsapp').value.trim();
+      
+      if (!paymentValue || parseFloat(paymentValue) <= 0) {
+        showAlert('Informe o valor da inscrição.', 'error');
+        return;
+      }
+      
+      if (!pixKey) {
+        showAlert('Informe a chave PIX (copia e cola).', 'error');
+        return;
+      }
+      
+      pageData.form_config.payment = {
+        value: parseFloat(paymentValue),
+        pix_key: pixKey,
+        whatsapp: whatsapp
+      };
+    }
   } else {
     // Validações do Canva
     const canvaUrl = document.getElementById('page-canva-url').value.trim();
@@ -796,11 +907,20 @@ function savePage() {
   renderPagesList();
   hidePageForm();
   showAlert('Página salva com sucesso!');
+  
+  // Recarregar preview se estiver visualizando páginas
+  const activeTab = document.querySelector('.admin-tab.active');
+  if (activeTab && activeTab.dataset.tab === 'pages') {
+    refreshPreview();
+  }
 }
 
 // ============= THEME EDITOR =============
 
 function saveTheme() {
+  // Salvar estado atual no histórico antes de salvar
+  saveToUndoStack();
+  
   const theme = {
     primary: document.getElementById('theme-primary').value,
     secondary: document.getElementById('theme-secondary').value,
@@ -812,7 +932,9 @@ function saveTheme() {
   saveHomeContent(state.homeContent);
   applyThemeToAdmin(theme);
   showAlert('Tema salvo com sucesso!');
-  updatePreview();
+  
+  // Recarregar o preview completamente
+  refreshPreview();
 }
 
 function revertTheme() {
@@ -825,6 +947,32 @@ function revertTheme() {
     applyThemeToAdmin(data.theme);
     showAlert('Tema revertido.');
     updatePreview();
+  }
+}
+
+function restoreDefaultTheme() {
+  if (confirm('Deseja restaurar as cores padrão do tema?')) {
+    // Salvar estado atual no histórico antes de restaurar
+    saveToUndoStack();
+    
+    // Cores padrão
+    const defaultTheme = {
+      primary: '#0E7C7B',
+      secondary: '#F4A261',
+      text: '#1B1B1B',
+      background: '#FAFAFA'
+    };
+    
+    document.getElementById('theme-primary').value = defaultTheme.primary;
+    document.getElementById('theme-secondary').value = defaultTheme.secondary;
+    document.getElementById('theme-text').value = defaultTheme.text;
+    document.getElementById('theme-bg').value = defaultTheme.background;
+    
+    state.homeContent.theme = defaultTheme;
+    saveHomeContent(state.homeContent);
+    applyThemeToAdmin(defaultTheme);
+    showAlert('Cores padrão restauradas com sucesso!');
+    refreshPreview();
   }
 }
 
@@ -871,6 +1019,7 @@ function initPreview() {
       const theme = {
         primary: document.getElementById('theme-primary').value,
         secondary: document.getElementById('theme-secondary').value,
+        text: document.getElementById('theme-text').value,
         background: document.getElementById('theme-bg').value
       };
       applyThemeToAdmin(theme);
@@ -903,6 +1052,7 @@ function initEventListeners() {
   // Home
   document.getElementById('save-home').addEventListener('click', saveHome);
   document.getElementById('revert-home').addEventListener('click', revertHome);
+  document.getElementById('restore-default-home').addEventListener('click', restoreDefaultHome);
   document.getElementById('export-home').addEventListener('click', exportHome);
   document.getElementById('import-home').addEventListener('click', importHome);
   
@@ -942,12 +1092,18 @@ function initEventListeners() {
     toggleFormFields(e.target.checked);
   });
   
+  // Toggle pagamento
+  document.getElementById('form-requires-payment').addEventListener('change', (e) => {
+    togglePaymentFields(e.target.checked);
+  });
+  
   // Adicionar campo ao formulário
   document.getElementById('add-form-field').addEventListener('click', addFormField);
   
   // Theme
   document.getElementById('save-theme').addEventListener('click', saveTheme);
   document.getElementById('revert-theme').addEventListener('click', revertTheme);
+  document.getElementById('restore-default-theme').addEventListener('click', restoreDefaultTheme);
   
   // Inscriptions
   document.getElementById('filter-page').addEventListener('change', () => {
@@ -965,6 +1121,9 @@ function initEventListeners() {
       closeInscriptionModal();
     }
   });
+  
+  // Images
+  document.getElementById('clear-all-images').addEventListener('click', clearAllImages);
 }
 
 // ============= INSCRIPTIONS MANAGER =============
@@ -1332,6 +1491,236 @@ function clearAllInscriptions() {
   }
 }
 
+// ============= IMAGES MANAGER =============
+
+const API_URL = window.location.origin;
+
+async function loadImages() {
+  try {
+    const response = await fetch(`${API_URL}/api/images`);
+    const data = await response.json();
+    return data.images || [];
+  } catch (error) {
+    console.error('Erro ao carregar imagens:', error);
+    return [];
+  }
+}
+
+function loadImagesEditor() {
+  renderImagesGrid();
+  initImageUpload();
+}
+
+async function renderImagesGrid() {
+  const images = await loadImages();
+  const grid = document.getElementById('images-grid');
+  const count = document.getElementById('images-count');
+  
+  count.textContent = images.length;
+  
+  if (images.length === 0) {
+    grid.innerHTML = '<p style="text-align: center; color: var(--color-gray-dark); padding: var(--spacing-lg);">Nenhuma imagem ainda. Faça upload acima.</p>';
+    return;
+  }
+  
+  grid.innerHTML = '';
+  
+  images.forEach(image => {
+    const card = document.createElement('div');
+    card.className = 'image-card';
+    
+    // Calcular tamanho em KB
+    const sizeKB = Math.round(image.size / 1024);
+    
+    // Obter dimensões da imagem
+    const img = new Image();
+    img.src = image.path;
+    
+    card.innerHTML = `
+      <img src="${image.path}" alt="${image.filename}" class="image-preview">
+      <div class="image-name" title="${image.filename}">${image.filename}</div>
+      <div class="image-info" id="info-${image.filename.replace(/[^a-z0-9]/gi, '')}">
+        💾 ${sizeKB}KB
+      </div>
+      <div class="image-actions">
+        <button class="copy-name-btn" data-name="${image.filename}">📋 Copiar Nome</button>
+        <button class="delete-image-btn" data-name="${image.filename}">🗑️</button>
+      </div>
+    `;
+    
+    grid.appendChild(card);
+    
+    // Atualizar dimensões quando a imagem carregar
+    img.onload = () => {
+      const infoEl = document.getElementById(`info-${image.filename.replace(/[^a-z0-9]/gi, '')}`);
+      if (infoEl) {
+        infoEl.textContent = `📏 ${img.width}x${img.height}px | 💾 ${sizeKB}KB`;
+      }
+    };
+  });
+  
+  // Event listeners
+  grid.querySelectorAll('.copy-name-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const name = e.target.dataset.name;
+      copyImageName(name);
+    });
+  });
+  
+  grid.querySelectorAll('.delete-image-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const name = e.target.dataset.name;
+      deleteImage(name);
+    });
+  });
+}
+
+function initImageUpload() {
+  const uploadArea = document.getElementById('upload-area');
+  const fileInput = document.getElementById('image-upload-input');
+  
+  // Click to upload
+  uploadArea.addEventListener('click', () => {
+    fileInput.click();
+  });
+  
+  // File input change
+  fileInput.addEventListener('change', async (e) => {
+    await handleFiles(e.target.files);
+    fileInput.value = ''; // Reset input
+  });
+  
+  // Drag and drop
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+  
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+  
+  uploadArea.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    await handleFiles(e.dataTransfer.files);
+  });
+}
+
+async function handleFiles(files) {
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+  
+  for (const file of Array.from(files)) {
+    // Validar tipo
+    if (!validTypes.includes(file.type)) {
+      showAlert(`${file.name}: Formato não suportado. Use JPG, PNG, GIF ou WebP.`, 'error');
+      continue;
+    }
+    
+    // Validar tamanho
+    if (file.size > maxSize) {
+      showAlert(`${file.name}: Arquivo muito grande. Máximo 5MB.`, 'error');
+      continue;
+    }
+    
+    // Processar imagem
+    await uploadImage(file);
+  }
+}
+
+async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  try {
+    const response = await fetch(`${API_URL}/api/upload`, {
+      method: 'POST',
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      showAlert(`Imagem "${data.originalName}" salva com sucesso!`);
+      await renderImagesGrid();
+    } else {
+      showAlert(`Erro ao fazer upload: ${data.error}`, 'error');
+    }
+  } catch (error) {
+    console.error('Erro no upload:', error);
+    showAlert(`Erro ao fazer upload de "${file.name}"`, 'error');
+  }
+}
+
+function copyImageName(name) {
+  // Copiar para clipboard
+  navigator.clipboard.writeText(name).then(() => {
+    showAlert(`Nome copiado: ${name}`);
+  }).catch(() => {
+    // Fallback para navegadores antigos
+    const textarea = document.createElement('textarea');
+    textarea.value = name;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showAlert(`Nome copiado: ${name}`);
+  });
+}
+
+async function deleteImage(name) {
+  if (confirm(`Deseja realmente excluir a imagem "${name}"?`)) {
+    try {
+      const response = await fetch(`${API_URL}/api/images/${encodeURIComponent(name)}`, {
+        method: 'DELETE'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showAlert(`Imagem "${name}" excluída.`);
+        await renderImagesGrid();
+      } else {
+        showAlert(`Erro ao excluir: ${data.error}`, 'error');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir imagem:', error);
+      showAlert(`Erro ao excluir "${name}"`, 'error');
+    }
+  }
+}
+
+async function clearAllImages() {
+  if (confirm('ATENÇÃO: Isso irá excluir TODAS as imagens. Deseja continuar?')) {
+    if (confirm('Tem certeza absoluta? Esta ação não pode ser desfeita!')) {
+      try {
+        const images = await loadImages();
+        
+        for (const image of images) {
+          await fetch(`${API_URL}/api/images/${encodeURIComponent(image.filename)}`, {
+            method: 'DELETE'
+          });
+        }
+        
+        await renderImagesGrid();
+        showAlert('Todas as imagens foram removidas.');
+      } catch (error) {
+        console.error('Erro ao limpar imagens:', error);
+        showAlert('Erro ao limpar imagens', 'error');
+      }
+    }
+  }
+}
+
+async function exportImagesBackup() {
+  showAlert('Função de backup desabilitada. As imagens estão salvas na pasta uploads/ do projeto.', 'error');
+}
+
+async function importImagesBackup() {
+  showAlert('Função de importação desabilitada. Faça upload das imagens diretamente.', 'error');
+}
+
 // ============= AUTH (MVP) =============
 
 function checkAuth() {
@@ -1368,6 +1757,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadHomeEditor();
   loadPagesEditor();
   loadInscriptionsEditor();
+  loadImagesEditor();
   initPreview();
   initEventListeners();
   
