@@ -363,6 +363,19 @@
       padding: var(--spacing-sm);
       border-radius: var(--border-radius);
       margin-bottom: var(--spacing-md);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .alert-icon {
+      font-weight: bold;
+      font-size: 1.1em;
+      min-width: 20px;
+      text-align: center;
     }
 
     .alert-success {
@@ -375,6 +388,26 @@
       background: #FED7D7;
       color: #742A2A;
       border: 1px solid #FC8181;
+    }
+
+    .alert-warning {
+      background: #FEFCBF;
+      color: #744210;
+      border: 1px solid #F6E05E;
+    }
+
+    .alert-info {
+      background: #BEE3F8;
+      color: #2A4365;
+      border: 1px solid #90CDF4;
+    }
+
+    #alert-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      max-width: 400px;
     }
 
     .form-field-item {
@@ -1174,7 +1207,12 @@
 
     <!-- Preview (Direita) -->
     <div class="admin-preview">
-      <div class="preview-label" id="preview-label">Preview da Home</div>
+      <div class="preview-label" id="preview-label">
+        <span>Preview:</span>
+        <select id="preview-selector" style="margin-left: 10px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; background: white;">
+          <option value="home">Home</option>
+        </select>
+      </div>
       <div class="preview-container">
         <iframe id="preview-frame" src="/index.html?preview=1"></iframe>
       </div>
