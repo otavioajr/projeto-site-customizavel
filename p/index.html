@@ -86,7 +86,7 @@
     <!-- Header -->
     <header class="page-header">
       <div class="container">
-        <a href="/" class="page-logo">Aventuras</a>
+        <a href="/" class="page-logo" id="site-logo">Aventuras</a>
         <a href="/" class="page-back">← Voltar à Home</a>
       </div>
     </header>
@@ -97,6 +97,23 @@
     </div>
   </div>
 
-  <script src="../assets/js/page.js"></script>
+  <script src="../assets/js/page.js?v=3"></script>
+  <script>
+    // Forçar atualização do nome do site após carregamento
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        try {
+          const homeContent = JSON.parse(localStorage.getItem('home_content') || '{}');
+          const siteName = homeContent.seo?.site_name || 'Aventuras';
+          const logoElement = document.getElementById('site-logo');
+          if (logoElement && logoElement.textContent !== siteName) {
+            logoElement.textContent = siteName;
+          }
+        } catch (e) {
+          console.error('Erro ao atualizar nome do site:', e);
+        }
+      }, 100);
+    });
+  </script>
 </body>
 </html>

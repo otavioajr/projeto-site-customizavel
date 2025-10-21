@@ -37,6 +37,20 @@ npm start
 # Site: http://localhost:3000/
 ```
 
+### 🌐 Compartilhar Online (ngrok)
+
+Para criar um túnel público e compartilhar seu projeto:
+
+```bash
+# Método rápido
+./start-ngrok.sh
+
+# Ou manual
+ngrok http 3000
+```
+
+📖 **Guia completo:** Veja `GUIA_RAPIDO_NGROK.md`
+
 ## 🖼️ Sistema de Imagens (NOVO!)
 
 ### Como Funciona

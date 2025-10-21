@@ -15,8 +15,13 @@ function loadPages() {
 // Obter slug da URL (hash)
 function getSlugFromUrl() {
   // Tenta primeiro hash, depois query string
-  const hash = window.location.hash.replace('#', '');
-  if (hash) return hash;
+  let hash = window.location.hash.replace('#', '');
+  
+  // Remover query string do hash se existir (ex: #roteiros?preview=1 -> roteiros)
+  if (hash) {
+    hash = hash.split('?')[0];
+    return hash;
+  }
   
   const params = new URLSearchParams(window.location.search);
   return params.get('slug');
@@ -26,6 +31,9 @@ function getSlugFromUrl() {
 function renderPage() {
   const slug = getSlugFromUrl();
   const content = document.getElementById('page-content');
+  
+  // Carregar nome do site
+  loadSiteName();
   
   if (!slug) {
     showNotFound(content);
@@ -231,6 +239,20 @@ function showNotFound(container) {
       <a href="/" class="btn btn-primary">Voltar à Home</a>
     </div>
   `;
+}
+
+// Carregar nome do site
+function loadSiteName() {
+  try {
+    const homeContent = JSON.parse(localStorage.getItem('home_content') || '{}');
+    const siteName = homeContent.seo?.site_name || 'Aventuras';
+    const logoElement = document.getElementById('site-logo');
+    if (logoElement) {
+      logoElement.textContent = siteName;
+    }
+  } catch (e) {
+    console.error('Erro ao carregar nome do site:', e);
+  }
 }
 
 // Inicialização

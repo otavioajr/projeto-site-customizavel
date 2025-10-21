@@ -199,6 +199,7 @@ function getDefaultHomeContent() {
       background: "#FAFAFA"
     },
     seo: {
+      site_name: "Aventuras",
       title: "Aventuras Guiadas com Segurança",
       description: "Trilhas, escalada e mergulho com guia certificado. Experiências inesquecíveis em contato com a natureza."
     },
@@ -264,6 +265,7 @@ function loadHomeEditor() {
   document.getElementById('contact-location').value = data.contact?.location || '';
   
   // SEO
+  document.getElementById('site-name').value = data.seo?.site_name || 'Aventuras';
   document.getElementById('seo-title').value = data.seo?.title || '';
   document.getElementById('seo-description').value = data.seo?.description || '';
   
@@ -430,6 +432,7 @@ function collectHomeData() {
       background: document.getElementById('theme-bg').value
     },
     seo: {
+      site_name: document.getElementById('site-name').value,
       title: document.getElementById('seo-title').value,
       description: document.getElementById('seo-description').value
     },
@@ -1152,7 +1155,7 @@ function updatePreview() {
     // Navegar para a página específica
     const page = state.pages.find(p => p.slug === selectedPage);
     if (page) {
-      state.previewFrame.src = `/p/#${page.slug}?preview=1`;
+      state.previewFrame.src = `/p/index.html#${page.slug}?preview=1`;
     }
   }
 }

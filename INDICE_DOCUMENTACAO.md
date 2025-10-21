@@ -14,6 +14,7 @@ Este projeto possui documentação completa e organizada. Use este índice para 
 - Visão geral do projeto
 - Características principais
 - Quick start (como rodar)
+- Compartilhamento online (ngrok)
 - Estrutura de pastas
 - Rotas do site
 - Modelo de dados
@@ -21,6 +22,33 @@ Este projeto possui documentação completa e organizada. Use este índice para 
 - Deploy básico
 
 **Quando usar**: Primeira leitura, entender o projeto, quick start
+
+---
+
+### 1.1. [GUIA_RAPIDO_NGROK.md](GUIA_RAPIDO_NGROK.md) 🆕
+**Para**: Desenvolvedores e usuários (compartilhar projeto online)  
+**Conteúdo**:
+- Instalação rápida do ngrok
+- Uso do script automático
+- Como copiar e compartilhar URL
+- Ver requisições em tempo real
+- Solução de problemas comuns
+
+**Quando usar**: Precisa mostrar o projeto para cliente/amigo remotamente
+
+---
+
+### 1.2. [NGROK_SETUP.md](NGROK_SETUP.md) 🆕
+**Para**: Desenvolvedores (documentação completa ngrok)  
+**Conteúdo**:
+- Instalação detalhada
+- Configuração de conta
+- Comandos avançados
+- Segurança e limitações
+- Alternativas ao ngrok
+- Troubleshooting completo
+
+**Quando usar**: Precisa de configuração avançada ou resolver problemas
 
 ---
 

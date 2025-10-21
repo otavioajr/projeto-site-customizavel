@@ -134,6 +134,11 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+// Rota para confirmação (redireciona /confirmacao para /confirmacao.html)
+app.get('/confirmacao', (req, res) => {
+  res.sendFile(path.join(__dirname, 'confirmacao.html'));
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
