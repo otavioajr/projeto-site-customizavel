@@ -139,9 +139,14 @@ app.get('/confirmacao', (req, res) => {
   res.sendFile(path.join(__dirname, 'confirmacao.html'));
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-  console.log(`📁 Pasta de uploads: ${uploadsDir}`);
-  console.log(`📸 Admin disponível em: http://localhost:${PORT}/admin.html`);
-});
+// Exportar app para Vercel (serverless)
+module.exports = app;
+
+// Iniciar servidor apenas se executado diretamente (não em serverless)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
+    console.log(`📁 Pasta de uploads: ${uploadsDir}`);
+    console.log(`📸 Admin disponível em: http://localhost:${PORT}/admin.html`);
+  });
+}
