@@ -1226,16 +1226,31 @@
 
   <input type="file" id="import-file-input" accept=".json" style="display: none;">
   <script>
-    // Carregar config de acordo com o ambiente
-    const configScript = document.createElement('script');
-    configScript.src = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
-    configScript.onerror = () => {
-      console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
-      window.SUPABASE_URL = window.SUPABASE_URL || '';
-      window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
-    };
-    document.head.appendChild(configScript);
+    // Carregar config de acordo com o ambiente e aguardar antes de carregar o admin.js
+    (async () => {
+      const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
+      
+      try {
+        await new Promise((resolve, reject) => {
+          const configScript = document.createElement('script');
+          configScript.src = configSrc;
+          configScript.onload = resolve;
+          configScript.onerror = reject;
+          document.head.appendChild(configScript);
+        });
+        console.log('✅ Config carregado com sucesso');
+      } catch (error) {
+        console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
+        window.SUPABASE_URL = window.SUPABASE_URL || '';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+      }
+      
+      // Agora carregar o admin.js
+      const adminScript = document.createElement('script');
+      adminScript.type = 'module';
+      adminScript.src = '/assets/js/admin.js';
+      document.body.appendChild(adminScript);
+    })();
   </script>
-  <script type="module" src="/assets/js/admin.js"></script>
 </body>
 </html>
