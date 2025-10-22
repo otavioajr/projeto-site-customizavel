@@ -355,9 +355,16 @@ function highlightSection(sectionId) {
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', async () => {
+async function initApp() {
   await renderMenu();
   await renderHome();
   initMobileMenu();
   handlePreviewMode();
-});
+}
+
+// Executar imediatamente se DOM já estiver carregado, ou aguardar
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

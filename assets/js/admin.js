@@ -1946,7 +1946,7 @@ function checkAuth() {
 
 // ============= INIT =============
 
-document.addEventListener('DOMContentLoaded', () => {
+function initAdmin() {
   if (!checkAuth()) return;
   
   initTabs();
@@ -1959,4 +1959,11 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Aplicar tema inicial
   applyThemeToAdmin(state.homeContent.theme);
-});
+}
+
+// Executar imediatamente se DOM já estiver carregado, ou aguardar
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAdmin);
+} else {
+  initAdmin();
+}
