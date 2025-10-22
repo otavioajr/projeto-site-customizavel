@@ -1225,6 +1225,17 @@
   </div>
 
   <input type="file" id="import-file-input" accept=".json" style="display: none;">
-  <script src="/assets/js/admin.js"></script>
+  <script>
+    // Carregar config de acordo com o ambiente
+    const configScript = document.createElement('script');
+    configScript.src = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
+    configScript.onerror = () => {
+      console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
+      window.SUPABASE_URL = window.SUPABASE_URL || '';
+      window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+    };
+    document.head.appendChild(configScript);
+  </script>
+  <script type="module" src="/assets/js/admin.js"></script>
 </body>
 </html>

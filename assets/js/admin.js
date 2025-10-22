@@ -1,4 +1,13 @@
 // admin.js - CRUD completo e preview ao vivo
+import { 
+  getHomeContent, 
+  updateHomeContent, 
+  getAllPages, 
+  savePage as savePageSupabase, 
+  deletePage as deletePageSupabase,
+  getInscriptions,
+  updateInscriptionStatus
+} from './supabase.js';
 
 // Estado global
 const state = {
@@ -110,33 +119,57 @@ function sanitizeHtml(text) {
 
 // ============= STORAGE =============
 
-function loadHomeContent() {
-  const raw = localStorage.getItem('home_content');
-  if (!raw) return getDefaultHomeContent();
+async function loadHomeContent() {
   try {
-    return JSON.parse(raw);
+    const content = await getHomeContent();
+    if (content) return content;
+    return getDefaultHomeContent();
   } catch (e) {
     console.error('Erro ao carregar home_content:', e);
-    return getDefaultHomeContent();
+    // Fallback para localStorage
+    const raw = localStorage.getItem('home_content');
+    if (!raw) return getDefaultHomeContent();
+    try {
+      return JSON.parse(raw);
+    } catch (e2) {
+      return getDefaultHomeContent();
+    }
   }
 }
 
-function saveHomeContent(content) {
-  localStorage.setItem('home_content', JSON.stringify(content));
+async function saveHomeContentToDb(content) {
+  try {
+    await updateHomeContent(content);
+    // Também salvar no localStorage como cache
+    localStorage.setItem('home_content', JSON.stringify(content));
+  } catch (e) {
+    console.error('Erro ao salvar home_content:', e);
+    // Fallback para localStorage apenas
+    localStorage.setItem('home_content', JSON.stringify(content));
+    throw e;
+  }
 }
 
-function loadPages() {
-  const raw = localStorage.getItem('pages');
-  if (!raw) return [];
+async function loadPages() {
   try {
-    return JSON.parse(raw);
+    const pages = await getAllPages();
+    return pages || [];
   } catch (e) {
     console.error('Erro ao carregar pages:', e);
-    return [];
+    // Fallback para localStorage
+    const raw = localStorage.getItem('pages');
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch (e2) {
+      return [];
+    }
   }
 }
 
-function savePages(pages) {
+async function savePages(pages) {
+  // Esta função agora é apenas para compatibilidade
+  // As páginas individuais são salvas via savePage()
   localStorage.setItem('pages', JSON.stringify(pages));
 }
 
@@ -233,8 +266,8 @@ function initTabs() {
 
 // ============= HOME EDITOR =============
 
-function loadHomeEditor() {
-  state.homeContent = loadHomeContent();
+async function loadHomeEditor() {
+  state.homeContent = await loadHomeContent();
   const data = state.homeContent;
   
   // Hero
@@ -445,7 +478,7 @@ function collectHomeData() {
   };
 }
 
-function saveHome() {
+async function saveHome() {
   const saveButton = event?.target || document.querySelector('[onclick="saveHome()"]');
   const resetFeedback = saveButton ? showSavingFeedback(saveButton) : null;
   
@@ -453,16 +486,22 @@ function saveHome() {
   saveToUndoStack();
   
   const data = collectHomeData();
-  saveHomeContent(data);
-  state.homeContent = data;
   
-  setTimeout(() => {
-    showAlert('Home salva com sucesso!');
-    if (resetFeedback) resetFeedback();
+  try {
+    await saveHomeContentToDb(data);
+    state.homeContent = data;
     
-    // Recarregar o preview completamente
-    refreshPreview();
-  }, 300);
+    setTimeout(() => {
+      showAlert('Home salva com sucesso!');
+      if (resetFeedback) resetFeedback();
+      
+      // Recarregar o preview completamente
+      refreshPreview();
+    }, 300);
+  } catch (error) {
+    showAlert('Erro ao salvar: ' + error.message, 'error');
+    if (resetFeedback) resetFeedback();
+  }
 }
 
 function revertHome() {
@@ -557,8 +596,9 @@ function importHome() {
 
 // ============= PAGES EDITOR =============
 
-function loadPagesEditor() {
-  state.pages = loadPages();
+async function loadPagesEditor() {
+  const pages = await loadPages();
+  state.pages = Array.isArray(pages) ? pages : [];
   renderPagesList();
   updatePreviewSelector();
 }
@@ -566,6 +606,10 @@ function loadPagesEditor() {
 function renderPagesList() {
   const container = document.getElementById('pages-list');
   container.innerHTML = '';
+  
+  if (!Array.isArray(state.pages)) {
+    state.pages = [];
+  }
   
   const sortedPages = [...state.pages].sort((a, b) => a.order - b.order);
   
@@ -848,20 +892,25 @@ function editPage(id) {
   }
 }
 
-function deletePage(id) {
+async function deletePage(id) {
   const page = state.pages.find(p => p.id === id);
   if (!page) return;
   
   if (confirm(`Deseja realmente excluir a página "${page.label}"?`)) {
-    state.pages = state.pages.filter(p => p.id !== id);
-    savePages(state.pages);
-    renderPagesList();
-    updatePreviewSelector();
-    showAlert('Página excluída com sucesso!');
+    try {
+      await deletePageSupabase(id);
+      state.pages = state.pages.filter(p => p.id !== id);
+      await savePages(state.pages);
+      renderPagesList();
+      updatePreviewSelector();
+      showAlert('Página excluída com sucesso!');
+    } catch (error) {
+      showAlert('Erro ao excluir página: ' + error.message, 'error');
+    }
   }
 }
 
-function savePage() {
+async function savePage() {
   const saveButton = event?.target || document.querySelector('[onclick="savePage()"]');
   const resetFeedback = saveButton ? showSavingFeedback(saveButton) : null;
   
@@ -978,32 +1027,40 @@ function savePage() {
     pageData.canva_embed_url = canvaUrl;
   }
   
-  if (state.editingPageId) {
-    // Editar
-    const index = state.pages.findIndex(p => p.id === state.editingPageId);
-    state.pages[index] = pageData;
-  } else {
-    // Adicionar
-    state.pages.push(pageData);
-  }
-  
-  savePages(state.pages);
-  renderPagesList();
-  hidePageForm();
-  
-  setTimeout(() => {
-    showAlert('Página salva com sucesso!');
-    if (resetFeedback) resetFeedback();
+  try {
+    // Salvar no Supabase
+    const savedPage = await savePageSupabase(pageData);
     
-    // Atualizar seletor de preview
-    updatePreviewSelector();
-    
-    // Recarregar preview se estiver visualizando páginas
-    const activeTab = document.querySelector('.admin-tab.active');
-    if (activeTab && activeTab.dataset.tab === 'pages') {
-      refreshPreview();
+    if (state.editingPageId) {
+      // Editar
+      const index = state.pages.findIndex(p => p.id === state.editingPageId);
+      state.pages[index] = savedPage;
+    } else {
+      // Adicionar
+      state.pages.push(savedPage);
     }
-  }, 300);
+    
+    await savePages(state.pages);
+    renderPagesList();
+    hidePageForm();
+    
+    setTimeout(() => {
+      showAlert('Página salva com sucesso!');
+      if (resetFeedback) resetFeedback();
+      
+      // Atualizar seletor de preview
+      updatePreviewSelector();
+      
+      // Recarregar preview se estiver visualizando páginas
+      const activeTab = document.querySelector('.admin-tab.active');
+      if (activeTab && activeTab.dataset.tab === 'pages') {
+        refreshPreview();
+      }
+    }, 300);
+  } catch (error) {
+    showAlert('Erro ao salvar página: ' + error.message, 'error');
+    if (resetFeedback) resetFeedback();
+  }
 }
 
 // ============= THEME EDITOR =============
@@ -1272,9 +1329,9 @@ function loadInscriptions() {
   return state.inscriptions;
 }
 
-function loadInscriptionsEditor() {
+async function loadInscriptionsEditor() {
   loadInscriptions();
-  populatePageFilter();
+  await populatePageFilter();
   updateInscriptionsStats();
   renderInscriptionsTable();
 }
@@ -1316,10 +1373,11 @@ function updateInscriptionsStats() {
   document.getElementById('pending-inscriptions').textContent = pending;
 }
 
-function populatePageFilter() {
+async function populatePageFilter() {
   const select = document.getElementById('filter-page');
   // Filtrar apenas páginas de formulário que estão ativas
-  const pages = loadPages().filter(p => p.is_form && p.is_active);
+  const allPages = await loadPages();
+  const pages = Array.isArray(allPages) ? allPages.filter(p => p.is_form && p.is_active) : [];
   
   select.innerHTML = '';
   

@@ -124,6 +124,17 @@
     </div>
   </footer>
 
-  <script src="/assets/js/app.js"></script>
+  <script>
+    // Carregar config de acordo com o ambiente
+    const configScript = document.createElement('script');
+    configScript.src = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
+    configScript.onerror = () => {
+      console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
+      window.SUPABASE_URL = window.SUPABASE_URL || '';
+      window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+    };
+    document.head.appendChild(configScript);
+  </script>
+  <script type="module" src="/assets/js/app.js"></script>
 </body>
 </html>

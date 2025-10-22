@@ -1,4 +1,5 @@
 // app.js - Renderização da Home
+import { getHomeContent, getPages } from './supabase.js';
 
 // Helpers para buscar imagens locais
 function resolveImageUrl(urlOrName) {
@@ -60,14 +61,21 @@ function applyThemeVars(theme) {
 }
 
 // Carregar conteúdo da Home
-function loadHomeContent() {
-  const raw = localStorage.getItem('home_content');
-  if (!raw) return getDefaultHomeContent();
+async function loadHomeContent() {
   try {
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error('Erro ao carregar home_content:', e);
+    const content = await getHomeContent();
+    if (content) return content;
     return getDefaultHomeContent();
+  } catch (e) {
+    console.error('Erro ao carregar home_content do Supabase:', e);
+    // Fallback para localStorage
+    const raw = localStorage.getItem('home_content');
+    if (!raw) return getDefaultHomeContent();
+    try {
+      return JSON.parse(raw);
+    } catch (e2) {
+      return getDefaultHomeContent();
+    }
   }
 }
 
@@ -195,25 +203,32 @@ function renderGallery(imageUrls) {
 }
 
 // Carregar páginas do menu
-function loadPages() {
-  const raw = localStorage.getItem('pages');
-  if (!raw) return [];
+async function loadPages() {
   try {
-    return JSON.parse(raw);
+    const pages = await getPages();
+    return pages || [];
   } catch (e) {
-    console.error('Erro ao carregar pages:', e);
-    return [];
+    console.error('Erro ao carregar pages do Supabase:', e);
+    // Fallback para localStorage
+    const raw = localStorage.getItem('pages');
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw);
+    } catch (e2) {
+      return [];
+    }
   }
 }
 
 // Renderizar menu dinâmico
-function renderMenu() {
+async function renderMenu() {
   const nav = document.getElementById('main-nav');
   if (!nav) return;
   
-  const pages = loadPages().filter(p => p.is_active).sort((a, b) => a.order - b.order);
+  const pages = await loadPages();
+  const activePages = pages.filter(p => p.is_active).sort((a, b) => a.order - b.order);
   
-  pages.forEach(page => {
+  activePages.forEach(page => {
     const link = document.createElement('a');
     link.href = `/p/#${page.slug}`;
     link.textContent = page.label;
@@ -222,8 +237,8 @@ function renderMenu() {
 }
 
 // Renderizar Home
-function renderHome() {
-  const data = loadHomeContent();
+async function renderHome() {
+  const data = await loadHomeContent();
   if (!data) return;
 
   // SEO
@@ -340,9 +355,9 @@ function highlightSection(sectionId) {
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-  renderMenu();
-  renderHome();
+document.addEventListener('DOMContentLoaded', async () => {
+  await renderMenu();
+  await renderHome();
   initMobileMenu();
   handlePreviewMode();
 });

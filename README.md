@@ -1,12 +1,13 @@
 # 🏔️ Landing Page - Aventuras
 
-Landing page dinâmica e editável para profissionais de esportes de aventura com sistema completo de gerenciamento de imagens.
+Landing page dinâmica e editável para profissionais de esportes de aventura com sistema completo de gerenciamento de imagens e **persistência de dados via Supabase**.
 
 ## ✨ Features Principais
 
 - 🎨 Design moderno e responsivo
 - 🖼️ **Sistema de upload de imagens** (LGPD compliant)
-- 📝 Admin editável sem banco de dados
+- 💾 **Persistência real com Supabase** (banco de dados PostgreSQL)
+- 📝 Admin editável com sincronização em nuvem
 - 📄 Páginas dinâmicas com Canva
 - 📋 Formulários de inscrição customizáveis
 - 💳 Sistema de pagamento PIX
@@ -16,6 +17,12 @@ Landing page dinâmica e editável para profissionais de esportes de aventura co
 - 🔍 SEO otimizado
 
 ## 🚀 Início Rápido
+
+### ⚠️ IMPORTANTE: Configure o Supabase primeiro!
+
+**Leia:** `LEIA-ME-PRIMEIRO.md` ou `CONFIGURAR_SUPABASE.md`
+
+Sem o Supabase, os dados não persistem (problema reportado).
 
 ### Opção 1: Script Automático
 
@@ -88,6 +95,12 @@ projeto-leo/
 
 ## 📚 Documentação
 
+### 🚨 Configuração Essencial
+
+- **`LEIA-ME-PRIMEIRO.md`** - ⭐ COMECE AQUI! Guia rápido
+- **`CONFIGURAR_SUPABASE.md`** - Passo a passo completo (10 min)
+- **`SOLUCAO_PERSISTENCIA.md`** - Entenda o problema e a solução
+
 ### 📖 Guias de Uso
 
 - **`COMO_USAR_IMAGENS.md`** - Guia rápido de imagens
@@ -100,6 +113,7 @@ projeto-leo/
 - **`RESUMO_FINAL_IMAGENS.md`** - Detalhes da implementação
 - **`IMPLEMENTACAO.md`** - Arquitetura do sistema
 - **`MELHORIAS_ADMIN.md`** - Changelog das melhorias
+- **`SUPABASE_SETUP.md`** - Documentação avançada do Supabase
 
 ## 🎯 Como Usar o Admin
 
