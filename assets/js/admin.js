@@ -1965,5 +1965,6 @@ function initAdmin() {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initAdmin);
 } else {
-  initAdmin();
+  // Pequeno delay para garantir que o DOM esteja completamente renderizado
+  setTimeout(initAdmin, 100);
 }
