@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Conexão - Supabase</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .status {
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .status.loading {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .test-item {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #ddd;
+    }
+
+    .test-item.pass {
+      border-left-color: #28a745;
+    }
+
+    .test-item.fail {
+      border-left-color: #dc3545;
+    }
+
+    .test-item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .test-item small {
+      color: #666;
+      font-size: 12px;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s;
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .code {
+      background: #f4f4f4;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Teste de Conexão Supabase</h1>
+    <p class="subtitle">Verificando configuração do banco de dados</p>
+
+    <div id="status" class="status loading">
+      <strong>⏳ Testando conexão...</strong>
+    </div>
+
+    <div id="results"></div>
+
+    <button id="retry" style="display: none;" onclick="location.reload()">🔄 Testar Novamente</button>
+  </div>
+
+  <script src="/config.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const resultsDiv = document.getElementById('results');
+    const statusDiv = document.getElementById('status');
+    const retryBtn = document.getElementById('retry');
+
+    let allPassed = true;
+
+    function addTest(name, passed, message) {
+      const div = document.createElement('div');
+      div.className = `test-item ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <strong>${passed ? '✅' : '❌'} ${name}</strong>
+        <small>${message}</small>
+      `;
+      resultsDiv.appendChild(div);
+
+      if (!passed) allPassed = false;
+    }
+
+    async function runTests() {
+      try {
+        // Teste 1: Variáveis de ambiente
+        const hasUrl = !!window.SUPABASE_URL && window.SUPABASE_URL !== 'https://seu-projeto.supabase.co';
+        const hasKey = !!window.SUPABASE_ANON_KEY && window.SUPABASE_ANON_KEY !== 'sua-chave-publica';
+
+        addTest(
+          'Variáveis de Ambiente',
+          hasUrl && hasKey,
+          hasUrl && hasKey
+            ? `URL: ${window.SUPABASE_URL}`
+            : 'Configure as credenciais em config.js'
+        );
+
+        if (!hasUrl || !hasKey) {
+          throw new Error('Credenciais não configuradas');
+        }
+
+        // Teste 2: Criar cliente
+        const supabase = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        addTest('Cliente Supabase', true, 'Cliente inicializado com sucesso');
+
+        // Teste 3: Conectividade
+        const { error: pingError } = await supabase.from('home_content').select('id').limit(1);
+
+        if (pingError && pingError.code === '42P01') {
+          addTest('Conectividade', true, 'Conectado ao Supabase');
+          addTest('Tabelas', false, 'Tabelas não encontradas! Execute o SQL SETUP_TABELAS.sql no painel do Supabase');
+          throw new Error('Tabelas não criadas');
+        } else if (pingError) {
+          addTest('Conectividade', false, `Erro: ${pingError.message}`);
+          throw pingError;
+        } else {
+          addTest('Conectividade', true, 'Conectado ao Supabase');
+          addTest('Tabelas', true, 'Tabelas encontradas');
+        }
+
+        // Teste 4: Ler dados da home
+        const { data: homeData, error: homeError } = await supabase
+          .from('home_content')
+          .select('content')
+          .single();
+
+        addTest(
+          'Leitura de Dados',
+          !homeError,
+          !homeError ? 'Dados carregados com sucesso' : `Erro: ${homeError.message}`
+        );
+
+        // Teste 5: Verificar políticas RLS
+        const { data: pages, error: pagesError } = await supabase
+          .from('pages')
+          .select('*');
+
+        addTest(
+          'Políticas RLS',
+          !pagesError,
+          !pagesError ? 'Políticas configuradas corretamente' : `Erro: ${pagesError.message}`
+        );
+
+        // Teste 6: Teste de escrita (criar e deletar uma página de teste)
+        const testPage = {
+          label: 'Teste',
+          slug: 'teste-' + Date.now(),
+          order: 999,
+          is_active: false
+        };
+
+        const { data: insertData, error: insertError } = await supabase
+          .from('pages')
+          .insert([testPage])
+          .select()
+          .single();
+
+        if (!insertError && insertData) {
+          // Deletar página de teste
+          await supabase.from('pages').delete().eq('id', insertData.id);
+          addTest('Escrita de Dados', true, 'Inserção e deleção funcionando');
+        } else {
+          addTest('Escrita de Dados', false, `Erro: ${insertError?.message || 'Desconhecido'}`);
+        }
+
+        // Sucesso!
+        if (allPassed) {
+          statusDiv.className = 'status success';
+          statusDiv.innerHTML = `
+            <span class="icon">🎉</span>
+            <strong>Tudo funcionando perfeitamente!</strong>
+            <p style="margin-top: 8px; font-weight: normal;">
+              Seu Supabase está configurado e pronto para uso.<br>
+              Você pode fechar esta página e começar a usar o admin.
+            </p>
+          `;
+        } else {
+          statusDiv.className = 'status error';
+          statusDiv.innerHTML = `
+            <strong>⚠️ Alguns testes falharam</strong>
+            <p style="margin-top: 8px; font-weight: normal;">
+              Verifique os detalhes acima e corrija os problemas.
+            </p>
+          `;
+          retryBtn.style.display = 'block';
+        }
+
+      } catch (error) {
+        statusDiv.className = 'status error';
+        statusDiv.innerHTML = `
+          <strong>❌ Erro na conexão</strong>
+          <p style="margin-top: 8px; font-weight: normal;">${error.message}</p>
+        `;
+        retryBtn.style.display = 'block';
+      }
+    }
+
+    // Executar testes
+    runTests();
+  </script>
+</body>
+</html>
