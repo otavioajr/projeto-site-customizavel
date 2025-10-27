@@ -54,32 +54,16 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     return res.status(400).json({ error: 'Nenhum arquivo enviado' });
   }
 
-  // Obter dimensões da imagem
-  const sharp = require('sharp');
-  sharp(req.file.path)
-    .metadata()
-    .then(metadata => {
-      res.json({
-        success: true,
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        path: `/uploads/${req.file.filename}`,
-        size: req.file.size,
-        width: metadata.width,
-        height: metadata.height
-      });
-    })
-    .catch(err => {
-      res.json({
-        success: true,
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        path: `/uploads/${req.file.filename}`,
-        size: req.file.size,
-        width: 0,
-        height: 0
-      });
-    });
+  // Retornar informações do arquivo (sharp removido temporariamente)
+  res.json({
+    success: true,
+    filename: req.file.filename,
+    originalName: req.file.originalname,
+    path: `/uploads/${req.file.filename}`,
+    size: req.file.size,
+    width: 0,
+    height: 0
+  });
 });
 
 // Rota para listar imagens
