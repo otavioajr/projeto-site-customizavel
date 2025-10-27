@@ -297,3 +297,146 @@ checkSupabaseConnection().then(connected => {
 export function isConnected() {
   return isSupabaseConnected;
 }
+
+// ============= FUNÇÕES DE STORAGE (IMAGENS) =============
+
+/**
+ * Faz upload de uma imagem para o Supabase Storage
+ * @param {File} file - Arquivo de imagem
+ * @param {string} folder - Pasta dentro do bucket (opcional)
+ * @returns {Promise<{success: boolean, url?: string, path?: string, error?: string}>}
+ */
+export async function uploadImage(file, folder = '') {
+  try {
+    // Validar tipo de arquivo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        success: false,
+        error: 'Formato não suportado. Use JPG, PNG, GIF ou WebP.'
+      };
+    }
+
+    // Validar tamanho (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return {
+        success: false,
+        error: 'Arquivo muito grande. Tamanho máximo: 5MB.'
+      };
+    }
+
+    // Gerar nome único para o arquivo
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 9);
+    const ext = file.name.split('.').pop();
+    const filename = `${timestamp}-${random}.${ext}`;
+    const path = folder ? `${folder}/${filename}` : filename;
+
+    // Upload para o Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('images')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    // Obter URL pública
+    const { data: { publicUrl } } = supabase.storage
+      .from('images')
+      .getPublicUrl(path);
+
+    return {
+      success: true,
+      url: publicUrl,
+      path: path,
+      filename: filename,
+      originalName: file.name,
+      size: file.size
+    };
+  } catch (error) {
+    console.error('Erro ao fazer upload de imagem:', error);
+    return {
+      success: false,
+      error: error.message || 'Erro ao fazer upload da imagem'
+    };
+  }
+}
+
+/**
+ * Lista todas as imagens do bucket
+ * @param {string} folder - Pasta dentro do bucket (opcional)
+ * @returns {Promise<Array>}
+ */
+export async function listImages(folder = '') {
+  try {
+    const { data, error } = await supabase.storage
+      .from('images')
+      .list(folder, {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+    if (error) throw error;
+
+    // Adicionar URL pública para cada imagem
+    const images = data.map(file => {
+      const path = folder ? `${folder}/${file.name}` : file.name;
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(path);
+
+      return {
+        filename: file.name,
+        path: path,
+        url: publicUrl,
+        size: file.metadata?.size || 0,
+        uploadedAt: file.created_at,
+        mimetype: file.metadata?.mimetype
+      };
+    });
+
+    return images;
+  } catch (error) {
+    console.error('Erro ao listar imagens:', error);
+    return [];
+  }
+}
+
+/**
+ * Deleta uma imagem do bucket
+ * @param {string} path - Caminho completo da imagem no bucket
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export async function deleteImage(path) {
+  try {
+    const { error } = await supabase.storage
+      .from('images')
+      .remove([path]);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao deletar imagem:', error);
+    return {
+      success: false,
+      error: error.message || 'Erro ao deletar imagem'
+    };
+  }
+}
+
+/**
+ * Obtém URL pública de uma imagem
+ * @param {string} path - Caminho da imagem no bucket
+ * @returns {string}
+ */
+export function getImageUrl(path) {
+  const { data: { publicUrl } } = supabase.storage
+    .from('images')
+    .getPublicUrl(path);
+  
+  return publicUrl;
+}
