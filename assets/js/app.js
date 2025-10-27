@@ -241,11 +241,17 @@ async function renderHome() {
   const data = await loadHomeContent();
   if (!data) return;
 
-  // SEO
+  // SEO e Nome do Site
   document.title = data.seo?.title || document.title;
   const metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc && data.seo?.description) {
     metaDesc.setAttribute('content', data.seo.description);
+  }
+
+  // Atualizar nome do site no logo
+  const siteLogo = document.getElementById('site-logo');
+  if (siteLogo && data.seo?.site_name) {
+    siteLogo.textContent = data.seo.site_name;
   }
 
   // Tema
@@ -315,7 +321,13 @@ function handlePreviewMode() {
 function renderHomeWithData(data) {
   // Versão que aceita dados externos (para preview)
   if (data.seo?.title) document.title = data.seo.title;
-  
+
+  // Atualizar nome do site no logo
+  const siteLogo = document.getElementById('site-logo');
+  if (siteLogo && data.seo?.site_name) {
+    siteLogo.textContent = data.seo.site_name;
+  }
+
   if (data.theme) applyThemeVars(data.theme);
   
   const hero = data.hero || {};
