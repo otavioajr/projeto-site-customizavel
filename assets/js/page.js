@@ -292,4 +292,9 @@ function loadSiteName() {
 }
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', renderPage);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderPage);
+} else {
+  // DOM já carregado, executar imediatamente
+  renderPage();
+}
