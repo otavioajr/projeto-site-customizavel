@@ -1,5 +1,5 @@
 // page.js - Renderização de páginas internas (Canva e Formulários)
-import { getAllPages, saveInscription as saveInscriptionSupabase } from './supabase.js';
+import { getAllPages, saveInscription as saveInscriptionSupabase, getHomeContent } from './supabase.js';
 
 // Mostrar modal de erro customizado
 function showErrorModal(message) {
@@ -82,7 +82,7 @@ async function renderPage() {
   const content = document.getElementById('page-content');
 
   // Carregar nome do site
-  loadSiteName();
+  await loadSiteName();
 
   if (!slug) {
     showNotFound(content);
@@ -315,16 +315,31 @@ function showNotFound(container) {
 }
 
 // Carregar nome do site
-function loadSiteName() {
+async function loadSiteName() {
   try {
-    const homeContent = JSON.parse(localStorage.getItem('home_content') || '{}');
-    const siteName = homeContent.seo?.site_name || 'Aventuras';
+    // Tentar buscar do Supabase primeiro
+    let homeContent = await getHomeContent();
+
+    // Se não encontrou no Supabase, tentar localStorage
+    if (!homeContent) {
+      const raw = localStorage.getItem('home_content');
+      if (raw) {
+        homeContent = JSON.parse(raw);
+      }
+    }
+
+    const siteName = homeContent?.seo?.site_name || 'Aventuras';
     const logoElement = document.getElementById('site-logo');
     if (logoElement) {
       logoElement.textContent = siteName;
     }
   } catch (e) {
     console.error('Erro ao carregar nome do site:', e);
+    // Fallback para valor padrão
+    const logoElement = document.getElementById('site-logo');
+    if (logoElement) {
+      logoElement.textContent = 'Aventuras';
+    }
   }
 }
 
