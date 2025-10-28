@@ -1,12 +1,15 @@
 // admin.js - CRUD completo e preview ao vivo
-import { 
-  getHomeContent, 
-  updateHomeContent, 
-  getAllPages, 
-  savePage as savePageSupabase, 
+import {
+  getHomeContent,
+  updateHomeContent,
+  getAllPages,
+  savePage as savePageSupabase,
   deletePage as deletePageSupabase,
   getInscriptions,
-  updateInscriptionStatus
+  updateInscriptionStatus,
+  uploadImage as uploadImageSupabase,
+  listImages as listImagesSupabase,
+  deleteImage as deleteImageSupabase
 } from './supabase.js';
 
 // Estado global
@@ -1738,9 +1741,9 @@ const API_URL = window.location.origin;
 
 async function loadImages() {
   try {
-    const response = await fetch(`${API_URL}/api/images`);
-    const data = await response.json();
-    return data.images || [];
+    // Usar Supabase Storage em vez de API local
+    const images = await listImagesSupabase('site-images');
+    return images || [];
   } catch (error) {
     console.error('Erro ao carregar imagens:', error);
     return [];
@@ -1769,28 +1772,28 @@ async function renderImagesGrid() {
   images.forEach(image => {
     const card = document.createElement('div');
     card.className = 'image-card';
-    
+
     // Calcular tamanho em KB
     const sizeKB = Math.round(image.size / 1024);
-    
+
     // Obter dimensões da imagem
     const img = new Image();
-    img.src = image.path;
-    
+    img.src = image.url;  // Usar URL do Supabase
+
     card.innerHTML = `
-      <img src="${image.path}" alt="${image.filename}" class="image-preview">
+      <img src="${image.url}" alt="${image.filename}" class="image-preview">
       <div class="image-name" title="${image.filename}">${image.filename}</div>
       <div class="image-info" id="info-${image.filename.replace(/[^a-z0-9]/gi, '')}">
         💾 ${sizeKB}KB
       </div>
       <div class="image-actions">
-        <button class="copy-name-btn" data-name="${image.filename}">📋 Copiar Nome</button>
-        <button class="delete-image-btn" data-name="${image.filename}">🗑️</button>
+        <button class="copy-url-btn" data-url="${image.url}">📋 Copiar URL</button>
+        <button class="delete-image-btn" data-path="${image.path}">🗑️</button>
       </div>
     `;
-    
+
     grid.appendChild(card);
-    
+
     // Atualizar dimensões quando a imagem carregar
     img.onload = () => {
       const infoEl = document.getElementById(`info-${image.filename.replace(/[^a-z0-9]/gi, '')}`);
@@ -1801,17 +1804,17 @@ async function renderImagesGrid() {
   });
   
   // Event listeners
-  grid.querySelectorAll('.copy-name-btn').forEach(btn => {
+  grid.querySelectorAll('.copy-url-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const name = e.target.dataset.name;
-      copyImageName(name);
+      const url = e.target.dataset.url;
+      copyImageUrl(url);
     });
   });
-  
+
   grid.querySelectorAll('.delete-image-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const name = e.target.dataset.name;
-      deleteImage(name);
+      const path = e.target.dataset.path;
+      deleteImage(path);
     });
   });
 }
@@ -1871,22 +1874,15 @@ async function handleFiles(files) {
 }
 
 async function uploadImage(file) {
-  const formData = new FormData();
-  formData.append('image', file);
-  
   try {
-    const response = await fetch(`${API_URL}/api/upload`, {
-      method: 'POST',
-      body: formData
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      showAlert(`Imagem "${data.originalName}" salva com sucesso!`);
+    // Usar Supabase Storage em vez de upload local
+    const result = await uploadImageSupabase(file, 'site-images');
+
+    if (result.success) {
+      showAlert(`Imagem "${result.originalName}" salva com sucesso!`);
       await renderImagesGrid();
     } else {
-      showAlert(`Erro ao fazer upload: ${data.error}`, 'error');
+      showAlert(`Erro ao fazer upload: ${result.error}`, 'error');
     }
   } catch (error) {
     console.error('Erro no upload:', error);
@@ -1894,40 +1890,37 @@ async function uploadImage(file) {
   }
 }
 
-function copyImageName(name) {
-  // Copiar para clipboard
-  navigator.clipboard.writeText(name).then(() => {
-    showAlert(`Nome copiado: ${name}`);
+function copyImageUrl(url) {
+  // Copiar URL para clipboard
+  navigator.clipboard.writeText(url).then(() => {
+    showAlert(`URL copiada!`);
   }).catch(() => {
     // Fallback para navegadores antigos
     const textarea = document.createElement('textarea');
-    textarea.value = name;
+    textarea.value = url;
     document.body.appendChild(textarea);
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-    showAlert(`Nome copiado: ${name}`);
+    showAlert(`URL copiada!`);
   });
 }
 
-async function deleteImage(name) {
-  if (confirm(`Deseja realmente excluir a imagem "${name}"?`)) {
+async function deleteImage(path) {
+  if (confirm(`Deseja realmente excluir esta imagem?`)) {
     try {
-      const response = await fetch(`${API_URL}/api/images/${encodeURIComponent(name)}`, {
-        method: 'DELETE'
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        showAlert(`Imagem "${name}" excluída.`);
+      // Usar Supabase Storage em vez de API local
+      const result = await deleteImageSupabase(path);
+
+      if (result.success) {
+        showAlert(`Imagem excluída com sucesso!`);
         await renderImagesGrid();
       } else {
-        showAlert(`Erro ao excluir: ${data.error}`, 'error');
+        showAlert(`Erro ao excluir: ${result.error}`, 'error');
       }
     } catch (error) {
       console.error('Erro ao excluir imagem:', error);
-      showAlert(`Erro ao excluir "${name}"`, 'error');
+      showAlert(`Erro ao excluir imagem`, 'error');
     }
   }
 }
@@ -1937,11 +1930,9 @@ async function clearAllImages() {
     if (confirm('Tem certeza absoluta? Esta ação não pode ser desfeita!')) {
       try {
         const images = await loadImages();
-        
+
         for (const image of images) {
-          await fetch(`${API_URL}/api/images/${encodeURIComponent(image.filename)}`, {
-            method: 'DELETE'
-          });
+          await deleteImageSupabase(image.path);
         }
         
         await renderImagesGrid();
