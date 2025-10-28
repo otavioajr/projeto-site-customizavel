@@ -7,6 +7,12 @@ function showErrorModal(message) {
   const messageEl = document.getElementById('error-modal-message');
   const closeBtn = document.getElementById('error-modal-close');
 
+  // Se os elementos do modal não existirem, usar alert como fallback
+  if (!overlay || !messageEl || !closeBtn) {
+    alert(message);
+    return;
+  }
+
   messageEl.textContent = message;
   overlay.classList.add('active');
 
