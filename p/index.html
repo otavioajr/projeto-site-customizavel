@@ -79,9 +79,133 @@
       color: var(--color-gray-dark);
       margin-bottom: var(--spacing-md);
     }
+
+    /* Modal de Erro/Aviso */
+    .error-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .error-modal-overlay.active {
+      display: flex;
+    }
+
+    .error-modal {
+      background: white;
+      border-radius: 12px;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      animation: slideUp 0.4s ease-out;
+    }
+
+    .error-modal-header {
+      background: linear-gradient(135deg, #E53E3E, #C53030);
+      padding: var(--spacing-lg);
+      text-align: center;
+      color: white;
+    }
+
+    .error-modal-icon {
+      font-size: 3.5rem;
+      margin-bottom: var(--spacing-sm);
+      animation: shake 0.5s ease-in-out;
+    }
+
+    .error-modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .error-modal-body {
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .error-modal-message {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: var(--color-text);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .error-modal-button {
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      padding: var(--spacing-sm) var(--spacing-lg);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-width: 120px;
+    }
+
+    .error-modal-button:hover {
+      background: var(--color-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes shake {
+      0%, 100% {
+        transform: translateX(0);
+      }
+      10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-5px);
+      }
+      20%, 40%, 60%, 80% {
+        transform: translateX(5px);
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Modal de Erro -->
+  <div class="error-modal-overlay" id="error-modal-overlay">
+    <div class="error-modal">
+      <div class="error-modal-header">
+        <div class="error-modal-icon">❌</div>
+        <h2 class="error-modal-title">Vagas Esgotadas</h2>
+      </div>
+      <div class="error-modal-body">
+        <p class="error-modal-message" id="error-modal-message"></p>
+        <button class="error-modal-button" id="error-modal-close">Entendido</button>
+      </div>
+    </div>
+  </div>
   <div class="page-container">
     <!-- Header -->
     <header class="page-header">

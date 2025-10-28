@@ -1,6 +1,37 @@
 // page.js - Renderização de páginas internas (Canva e Formulários)
 import { getAllPages, saveInscription as saveInscriptionSupabase } from './supabase.js';
 
+// Mostrar modal de erro customizado
+function showErrorModal(message) {
+  const overlay = document.getElementById('error-modal-overlay');
+  const messageEl = document.getElementById('error-modal-message');
+  const closeBtn = document.getElementById('error-modal-close');
+
+  messageEl.textContent = message;
+  overlay.classList.add('active');
+
+  // Fechar ao clicar no botão
+  closeBtn.onclick = () => {
+    overlay.classList.remove('active');
+  };
+
+  // Fechar ao clicar fora do modal
+  overlay.onclick = (e) => {
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+    }
+  };
+
+  // Fechar com ESC
+  const handleEscape = (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('active')) {
+      overlay.classList.remove('active');
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+}
+
 // Carregar páginas
 async function loadPages() {
   try {
@@ -233,10 +264,10 @@ async function handleFormSubmit(form, config, page) {
     // Verificar se é erro de limite atingido
     if (error.message && error.message.startsWith('LIMIT_REACHED:')) {
       const message = error.message.replace('LIMIT_REACHED:', '');
-      alert('❌ ' + message);
+      showErrorModal(message);
     } else {
       console.error('Erro ao enviar inscrição:', error);
-      alert('❌ Erro ao enviar inscrição. Por favor, tente novamente.');
+      showErrorModal('Erro ao enviar inscrição. Por favor, tente novamente.');
     }
   }
 }
