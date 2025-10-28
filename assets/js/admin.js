@@ -692,18 +692,21 @@ function showPageForm(page = null) {
       // Preencher campos do formulário
       document.getElementById('form-title').value = page.form_config?.title || '';
       document.getElementById('form-description').value = page.form_config?.description || '';
-      
+
       // Campos de pagamento
       const requiresPayment = page.form_config?.requires_payment || false;
       document.getElementById('form-requires-payment').checked = requiresPayment;
       togglePaymentFields(requiresPayment);
-      
+
       if (requiresPayment && page.form_config?.payment) {
         document.getElementById('payment-value').value = page.form_config.payment.value || '';
         document.getElementById('payment-pix-key').value = page.form_config.payment.pix_key || '';
         document.getElementById('payment-whatsapp').value = page.form_config.payment.whatsapp || '';
       }
-      
+
+      // Limite de pessoas
+      document.getElementById('form-max-participants').value = page.form_config?.max_participants || 0;
+
       state.formFields = page.form_config?.fields || [];
       renderFormFieldsList();
     } else {
@@ -730,6 +733,7 @@ function showPageForm(page = null) {
     document.getElementById('payment-value').value = '';
     document.getElementById('payment-pix-key').value = '';
     document.getElementById('payment-whatsapp').value = '';
+    document.getElementById('form-max-participants').value = 0;
     document.getElementById('page-order').value = state.pages.length + 1;
     document.getElementById('page-seo-title').value = '';
     document.getElementById('page-seo-desc').value = '';
@@ -786,7 +790,11 @@ function renderFormFieldsList() {
     item.innerHTML = `
       <div class="form-field-item-header">
         <span class="form-field-item-title">Campo ${index + 1}</span>
-        <button class="array-item-remove" data-index="${index}">×</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-small" style="padding: 4px 8px; font-size: 0.875rem;" data-index="${index}" data-action="move-up" ${index === 0 ? 'disabled' : ''} title="Mover para cima">↑</button>
+          <button class="btn btn-small" style="padding: 4px 8px; font-size: 0.875rem;" data-index="${index}" data-action="move-down" ${index === state.formFields.length - 1 ? 'disabled' : ''} title="Mover para baixo">↓</button>
+          <button class="array-item-remove" data-index="${index}">×</button>
+        </div>
       </div>
       <div class="form-group">
         <label>Tipo de Campo</label>
@@ -866,6 +874,21 @@ function renderFormFieldsList() {
       state.formFields[index].options = e.target.value.split('\n').filter(o => o.trim());
     });
   });
+
+  // Event listeners para mover campos
+  container.querySelectorAll('[data-action="move-up"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      moveFieldUp(index);
+    });
+  });
+
+  container.querySelectorAll('[data-action="move-down"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      moveFieldDown(index);
+    });
+  });
 }
 
 // Adicionar novo campo ao formulário
@@ -878,6 +901,26 @@ function addFormField() {
     options: []
   });
   renderFormFieldsList();
+}
+
+// Mover campo para cima
+function moveFieldUp(index) {
+  if (index > 0) {
+    const temp = state.formFields[index];
+    state.formFields[index] = state.formFields[index - 1];
+    state.formFields[index - 1] = temp;
+    renderFormFieldsList();
+  }
+}
+
+// Mover campo para baixo
+function moveFieldDown(index) {
+  if (index < state.formFields.length - 1) {
+    const temp = state.formFields[index];
+    state.formFields[index] = state.formFields[index + 1];
+    state.formFields[index + 1] = temp;
+    renderFormFieldsList();
+  }
 }
 
 function hidePageForm() {
@@ -980,12 +1023,14 @@ async function savePage() {
     }
     
     const requiresPayment = document.getElementById('form-requires-payment').checked;
-    
+    const maxParticipants = parseInt(document.getElementById('form-max-participants').value) || 0;
+
     pageData.form_config = {
       title: formTitle,
       description: formDescription,
       fields: state.formFields,
-      requires_payment: requiresPayment
+      requires_payment: requiresPayment,
+      max_participants: maxParticipants
     };
     
     // Se requer pagamento, validar e adicionar dados
