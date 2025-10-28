@@ -167,8 +167,22 @@ export async function updateHomeContent(content) {
 
 // ============= FUNÇÕES DE INSCRIÇÕES =============
 
-export async function saveInscription(pageSlug, formData) {
+export async function saveInscription(pageSlug, formData, maxParticipants = 0) {
   try {
+    // Se há limite definido, verificar quantidade de inscrições
+    if (maxParticipants > 0) {
+      const { count, error: countError } = await supabase
+        .from('inscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('page_slug', pageSlug);
+
+      if (countError) throw countError;
+
+      if (count >= maxParticipants) {
+        throw new Error(`LIMIT_REACHED:As vagas esgotaram! Esta atividade tinha limite de ${maxParticipants} ${maxParticipants === 1 ? 'vaga' : 'vagas'}.`);
+      }
+    }
+
     const { data, error } = await supabase
       .from('inscriptions')
       .insert([{
@@ -179,14 +193,26 @@ export async function saveInscription(pageSlug, formData) {
       }])
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   } catch (error) {
     console.error('Erro ao salvar inscrição no Supabase:', error);
+
+    // Se for erro de limite atingido, propagar
+    if (error.message && error.message.startsWith('LIMIT_REACHED:')) {
+      throw error;
+    }
+
     // Fallback para localStorage
     const key = `inscriptions_${pageSlug}`;
     const inscriptions = JSON.parse(localStorage.getItem(key) || '[]');
+
+    // Verificar limite no localStorage também
+    if (maxParticipants > 0 && inscriptions.length >= maxParticipants) {
+      throw new Error(`LIMIT_REACHED:As vagas esgotaram! Esta atividade tinha limite de ${maxParticipants} ${maxParticipants === 1 ? 'vaga' : 'vagas'}.`);
+    }
+
     const newInscription = {
       id: 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       page_slug: pageSlug,

@@ -790,9 +790,9 @@ function renderFormFieldsList() {
     item.innerHTML = `
       <div class="form-field-item-header">
         <span class="form-field-item-title">Campo ${index + 1}</span>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button class="btn btn-small" style="padding: 4px 8px; font-size: 0.875rem;" data-index="${index}" data-action="move-up" ${index === 0 ? 'disabled' : ''} title="Mover para cima">↑</button>
-          <button class="btn btn-small" style="padding: 4px 8px; font-size: 0.875rem;" data-index="${index}" data-action="move-down" ${index === state.formFields.length - 1 ? 'disabled' : ''} title="Mover para baixo">↓</button>
+        <div class="form-field-actions">
+          <button class="btn-reorder" data-index="${index}" data-action="move-up" ${index === 0 ? 'disabled' : ''} title="Mover para cima">↑</button>
+          <button class="btn-reorder" data-index="${index}" data-action="move-down" ${index === state.formFields.length - 1 ? 'disabled' : ''} title="Mover para baixo">↓</button>
           <button class="array-item-remove" data-index="${index}">×</button>
         </div>
       </div>
