@@ -97,7 +97,33 @@
     </div>
   </div>
 
-  <script src="../assets/js/page.js?v=3"></script>
+  <script>
+    // Carregar config de acordo com o ambiente e aguardar antes de carregar o page.js
+    (async () => {
+      const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
+
+      try {
+        await new Promise((resolve, reject) => {
+          const configScript = document.createElement('script');
+          configScript.src = configSrc;
+          configScript.onload = resolve;
+          configScript.onerror = reject;
+          document.head.appendChild(configScript);
+        });
+        console.log('✅ Config carregado com sucesso');
+      } catch (error) {
+        console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
+        window.SUPABASE_URL = window.SUPABASE_URL || '';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+      }
+
+      // Agora carregar o page.js
+      const pageScript = document.createElement('script');
+      pageScript.type = 'module';
+      pageScript.src = '../assets/js/page.js?v=4';
+      document.body.appendChild(pageScript);
+    })();
+  </script>
   <script>
     // Forçar atualização do nome do site após carregamento
     window.addEventListener('load', function() {

@@ -1,7 +1,19 @@
-// page.js - Renderização de páginas internas (Canva)
+// page.js - Renderização de páginas internas (Canva e Formulários)
+import { getAllPages, saveInscription as saveInscriptionSupabase } from './supabase.js';
 
 // Carregar páginas
-function loadPages() {
+async function loadPages() {
+  try {
+    const pages = await getAllPages();
+    return pages || [];
+  } catch (e) {
+    console.error('Erro ao carregar páginas:', e);
+    // Fallback para localStorage
+    return loadPagesFromLocal();
+  }
+}
+
+function loadPagesFromLocal() {
   const raw = localStorage.getItem('pages');
   if (!raw) return [];
   try {
@@ -28,21 +40,21 @@ function getSlugFromUrl() {
 }
 
 // Renderizar página
-function renderPage() {
+async function renderPage() {
   const slug = getSlugFromUrl();
   const content = document.getElementById('page-content');
-  
+
   // Carregar nome do site
   loadSiteName();
-  
+
   if (!slug) {
     showNotFound(content);
     return;
   }
-  
-  const pages = loadPages();
+
+  const pages = await loadPages();
   const page = pages.find(p => p.slug === slug && p.is_active);
-  
+
   if (!page) {
     showNotFound(content);
     return;
@@ -169,39 +181,63 @@ function renderForm(container, page) {
 }
 
 // Processar envio do formulário
-function handleFormSubmit(form, config, page) {
-  const formData = new FormData(form);
-  const data = {};
-  
-  // Coletar dados do formulário
-  config.fields.forEach((field, index) => {
-    const fieldId = `field-${index}`;
-    
-    if (field.type === 'checkbox-group') {
-      const checkboxes = form.querySelectorAll(`input[name="${fieldId}[]"]:checked`);
-      data[field.label] = Array.from(checkboxes).map(cb => cb.value);
-    } else if (field.type === 'checkbox') {
-      data[field.label] = form.querySelector(`#${fieldId}`).checked ? 'Sim' : 'Não';
+async function handleFormSubmit(form, config, page) {
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.textContent;
+
+  try {
+    // Desabilitar botão durante envio
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando...';
+
+    const formData = new FormData(form);
+    const data = {};
+
+    // Coletar dados do formulário
+    config.fields.forEach((field, index) => {
+      const fieldId = `field-${index}`;
+
+      if (field.type === 'checkbox-group') {
+        const checkboxes = form.querySelectorAll(`input[name="${fieldId}[]"]:checked`);
+        data[field.label] = Array.from(checkboxes).map(cb => cb.value);
+      } else if (field.type === 'checkbox') {
+        data[field.label] = form.querySelector(`#${fieldId}`).checked ? 'Sim' : 'Não';
+      } else {
+        data[field.label] = formData.get(fieldId) || '';
+      }
+    });
+
+    // Adicionar informações extras
+    data['_página'] = page.label;
+    data['_data_envio'] = new Date().toLocaleString('pt-BR');
+
+    // Obter limite de participantes
+    const maxParticipants = config.max_participants || 0;
+
+    // Salvar no Supabase (com validação de limite)
+    const result = await saveInscriptionSupabase(page.slug, data, maxParticipants);
+
+    // Redirecionar para página de confirmação
+    if (result && result.id) {
+      window.location.href = `/confirmacao?id=${result.id}&page=${page.slug}`;
     } else {
-      data[field.label] = formData.get(fieldId) || '';
+      // Fallback: mostrar mensagem de sucesso
+      form.style.display = 'none';
+      document.getElementById('form-success').style.display = 'block';
     }
-  });
-  
-  // Adicionar informações extras
-  data['_página'] = page.label;
-  data['_data_envio'] = new Date().toLocaleString('pt-BR');
-  
-  // Salvar no localStorage (histórico de inscrições)
-  const inscriptionId = saveInscription(page.slug, data);
-  
-  // Redirecionar para página de confirmação
-  if (inscriptionId) {
-    // Usar rota sem .html para evitar problemas com o servidor serve
-    window.location.href = `/confirmacao?id=${inscriptionId}&page=${page.slug}`;
-  } else {
-    // Fallback: mostrar mensagem de sucesso
-    form.style.display = 'none';
-    document.getElementById('form-success').style.display = 'block';
+  } catch (error) {
+    // Reabilitar botão
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalBtnText;
+
+    // Verificar se é erro de limite atingido
+    if (error.message && error.message.startsWith('LIMIT_REACHED:')) {
+      const message = error.message.replace('LIMIT_REACHED:', '');
+      alert('❌ ' + message);
+    } else {
+      console.error('Erro ao enviar inscrição:', error);
+      alert('❌ Erro ao enviar inscrição. Por favor, tente novamente.');
+    }
   }
 }
 
