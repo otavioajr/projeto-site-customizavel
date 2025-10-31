@@ -7,6 +7,7 @@ import {
   deletePage as deletePageSupabase,
   getInscriptions,
   updateInscriptionStatus,
+  deleteInscription as deleteInscriptionSupabase,
   uploadImage as uploadImageSupabase,
   listImages as listImagesSupabase,
   deleteImage as deleteImageSupabase
@@ -118,6 +119,86 @@ function sanitizeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function normalizeSession(session = {}) {
+  return {
+    id: session.id || generateId(),
+    title: session.title || '',
+    start: session.start || '',
+    end: session.end || '',
+    capacity: typeof session.capacity === 'number'
+      ? session.capacity
+      : parseInt(session.capacity, 10) || 0,
+    notes: session.notes || ''
+  };
+}
+
+function createEmptySession() {
+  return {
+    id: generateId(),
+    title: '',
+    start: '',
+    end: '',
+    capacity: 1,
+    notes: ''
+  };
+}
+
+function normalizeFieldForState(field = {}) {
+  const normalized = { ...field };
+  normalized.id = field.id || generateId();
+  normalized.type = field.type || 'text';
+  normalized.label = field.label || '';
+  normalized.placeholder = field.placeholder || '';
+  normalized.required = Boolean(field.required);
+  normalized.options = Array.isArray(field.options) ? field.options : [];
+
+  if (normalized.type === 'sessions') {
+    normalized.sessions = Array.isArray(field.sessions)
+      ? field.sessions.map(normalizeSession)
+      : [];
+  } else {
+    normalized.sessions = Array.isArray(field.sessions) ? field.sessions : [];
+  }
+
+  return normalized;
+}
+
+function calculateFieldCapacity(field) {
+  if (!field || field.type !== 'sessions' || !Array.isArray(field.sessions)) {
+    return 0;
+  }
+
+  return field.sessions.reduce((total, session) => {
+    const value = parseInt(session?.capacity, 10);
+    return total + (Number.isFinite(value) && value > 0 ? value : 0);
+  }, 0);
+}
+
+function calculateTotalCapacity(fields) {
+  if (!Array.isArray(fields)) return 0;
+  return fields.reduce((sum, field) => {
+    if (field.type === 'sessions') {
+      sum += calculateFieldCapacity(field);
+    }
+    return sum;
+  }, 0);
+}
+
+function updateTotalCapacitySummary() {
+  const wrapper = document.getElementById('form-total-capacity-wrapper');
+  const valueEl = document.getElementById('form-total-capacity-value');
+  if (!wrapper || !valueEl) return;
+
+  const total = calculateTotalCapacity(state.formFields);
+  if (total > 0) {
+    valueEl.textContent = total;
+    wrapper.style.display = 'block';
+  } else {
+    valueEl.textContent = '0';
+    wrapper.style.display = 'none';
+  }
 }
 
 // ============= STORAGE =============
@@ -263,6 +344,63 @@ function initTabs() {
       
       tab.classList.add('active');
       document.getElementById(`section-${targetTab}`).classList.add('active');
+    });
+  });
+}
+
+function initSubsectionAccordions() {
+  const sections = document.querySelectorAll('.admin-section .subsection');
+
+  sections.forEach((section) => {
+    if (section.dataset.accordionInitialized === 'true') return;
+
+    const titleEl = section.querySelector('.subsection-title');
+    if (!titleEl) return;
+
+    section.dataset.accordionInitialized = 'true';
+
+    const siblings = section.parentElement
+      ? Array.from(section.parentElement.querySelectorAll('.subsection'))
+      : [];
+    const isFirst = siblings.indexOf(section) === 0;
+
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'subsection-content';
+
+    while (titleEl.nextSibling) {
+      contentWrapper.appendChild(titleEl.nextSibling);
+    }
+
+    const toggleButton = document.createElement('button');
+    toggleButton.type = 'button';
+    toggleButton.className = 'subsection-toggle';
+    toggleButton.setAttribute('aria-expanded', isFirst ? 'true' : 'false');
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'subsection-title';
+    titleSpan.textContent = titleEl.textContent;
+    if (titleEl.id) {
+      titleSpan.id = titleEl.id;
+    }
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'subsection-toggle-icon';
+    iconSpan.textContent = '▾';
+
+    toggleButton.appendChild(titleSpan);
+    toggleButton.appendChild(iconSpan);
+
+    titleEl.remove();
+    section.appendChild(contentWrapper);
+    section.insertBefore(toggleButton, contentWrapper);
+
+    if (!isFirst) {
+      section.classList.add('collapsed');
+    }
+
+    toggleButton.addEventListener('click', () => {
+      const isCollapsed = section.classList.toggle('collapsed');
+      toggleButton.setAttribute('aria-expanded', (!isCollapsed).toString());
     });
   });
 }
@@ -707,10 +845,7 @@ function showPageForm(page = null) {
         document.getElementById('payment-whatsapp').value = page.form_config.payment.whatsapp || '';
       }
 
-      // Limite de pessoas
-      document.getElementById('form-max-participants').value = page.form_config?.max_participants || 0;
-
-      state.formFields = page.form_config?.fields || [];
+      state.formFields = (page.form_config?.fields || []).map(normalizeFieldForState);
       renderFormFieldsList();
     } else {
       // Preencher URL do Canva
@@ -736,7 +871,6 @@ function showPageForm(page = null) {
     document.getElementById('payment-value').value = '';
     document.getElementById('payment-pix-key').value = '';
     document.getElementById('payment-whatsapp').value = '';
-    document.getElementById('form-max-participants').value = 0;
     document.getElementById('page-order').value = state.pages.length + 1;
     document.getElementById('page-seo-title').value = '';
     document.getElementById('page-seo-desc').value = '';
@@ -755,13 +889,18 @@ function showPageForm(page = null) {
 function toggleFormFields(isForm) {
   const canvaFields = document.getElementById('canva-fields');
   const formFields = document.getElementById('form-fields');
+  const totalWrapper = document.getElementById('form-total-capacity-wrapper');
   
   if (isForm) {
     canvaFields.style.display = 'none';
     formFields.style.display = 'block';
+    updateTotalCapacitySummary();
   } else {
     canvaFields.style.display = 'block';
     formFields.style.display = 'none';
+    if (totalWrapper) {
+      totalWrapper.style.display = 'none';
+    }
   }
 }
 
@@ -776,16 +915,65 @@ function renderFormFieldsList() {
   const container = document.getElementById('form-fields-list');
   container.innerHTML = '';
   
+  state.formFields = state.formFields.map(normalizeFieldForState);
+
   state.formFields.forEach((field, index) => {
     const item = document.createElement('div');
     item.className = 'form-field-item';
     
-    let optionsHtml = '';
+    let extraConfigHtml = '';
     if (field.type === 'select' || field.type === 'radio' || field.type === 'checkbox-group') {
-      optionsHtml = `
+      extraConfigHtml = `
         <div class="form-group">
           <label>Opções (uma por linha)</label>
           <textarea class="field-options" data-index="${index}" rows="3">${(field.options || []).join('\n')}</textarea>
+        </div>
+      `;
+    } else if (field.type === 'sessions') {
+      const sessions = field.sessions || [];
+      const fieldCapacity = calculateFieldCapacity(field);
+      const sessionsHtml = sessions.length > 0
+        ? sessions.map((session, sessionIndex) => `
+            <div class="session-config-item">
+              <div class="session-config-header">
+                <span>Bateria ${sessionIndex + 1}</span>
+                <button type="button" class="btn btn-danger btn-small session-remove" data-index="${index}" data-session-index="${sessionIndex}" title="Remover bateria">Remover</button>
+              </div>
+              <div class="session-config-grid">
+                <div class="form-group">
+                  <label>Nome da bateria</label>
+                  <input type="text" class="session-title" data-index="${index}" data-session-index="${sessionIndex}" value="${session.title || ''}" placeholder="Ex: Bateria 1 - Iniciantes">
+                </div>
+                <div class="form-group">
+                  <label>Início</label>
+                  <input type="time" class="session-start" data-index="${index}" data-session-index="${sessionIndex}" value="${session.start || ''}">
+                </div>
+                <div class="form-group">
+                  <label>Término</label>
+                  <input type="time" class="session-end" data-index="${index}" data-session-index="${sessionIndex}" value="${session.end || ''}">
+                </div>
+                <div class="form-group">
+                  <label>Limite de vagas</label>
+                  <input type="number" min="1" class="session-capacity" data-index="${index}" data-session-index="${sessionIndex}" value="${session.capacity || 1}" placeholder="Ex: 10">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Observações (opcional)</label>
+                <input type="text" class="session-notes" data-index="${index}" data-session-index="${sessionIndex}" value="${session.notes || ''}" placeholder="Ex: Indicado para iniciantes absolutos">
+              </div>
+            </div>
+          `).join('')
+        : '<p class="session-config-empty">Nenhuma bateria cadastrada. Adicione ao menos uma.</p>';
+
+      extraConfigHtml = `
+        <div class="form-group">
+          <label>Baterias disponíveis</label>
+          <div class="session-config-wrapper">
+            ${sessionsHtml}
+          </div>
+          <p class="session-config-total">Total desta seleção: <strong>${fieldCapacity}</strong></p>
+          <button type="button" class="btn btn-secondary btn-small add-session" data-index="${index}">+ Adicionar bateria</button>
+          <span class="form-hint">Crie as baterias com horário e limite de vagas. Os limites são respeitados automaticamente nas inscrições.</span>
         </div>
       `;
     }
@@ -812,6 +1000,7 @@ function renderFormFieldsList() {
           <option value="radio" ${field.type === 'radio' ? 'selected' : ''}>Múltipla escolha (radio)</option>
           <option value="checkbox" ${field.type === 'checkbox' ? 'selected' : ''}>Checkbox único</option>
           <option value="checkbox-group" ${field.type === 'checkbox-group' ? 'selected' : ''}>Grupo de checkboxes</option>
+          <option value="sessions" ${field.type === 'sessions' ? 'selected' : ''}>Seleção de baterias (horários limitados)</option>
         </select>
       </div>
       <div class="form-group">
@@ -827,7 +1016,7 @@ function renderFormFieldsList() {
           <input type="checkbox" class="field-required" data-index="${index}" ${field.required ? 'checked' : ''}> Campo obrigatório
         </label>
       </div>
-      ${optionsHtml}
+      ${extraConfigHtml}
     `;
     
     container.appendChild(item);
@@ -845,7 +1034,17 @@ function renderFormFieldsList() {
   container.querySelectorAll('.field-type').forEach(select => {
     select.addEventListener('change', (e) => {
       const index = parseInt(e.target.dataset.index);
-      state.formFields[index].type = e.target.value;
+      const newType = e.target.value;
+      state.formFields[index].type = newType;
+      if (newType === 'sessions') {
+        const sessions = state.formFields[index].sessions || [];
+        state.formFields[index].sessions = sessions.length > 0 ? sessions.map(normalizeSession) : [createEmptySession()];
+      } else {
+        state.formFields[index].sessions = [];
+        if (!(newType === 'select' || newType === 'radio' || newType === 'checkbox-group')) {
+          state.formFields[index].options = [];
+        }
+      }
       renderFormFieldsList();
     });
   });
@@ -878,6 +1077,80 @@ function renderFormFieldsList() {
     });
   });
 
+  container.querySelectorAll('.add-session').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const index = parseInt(e.target.dataset.index);
+      if (!state.formFields[index].sessions) {
+        state.formFields[index].sessions = [];
+      }
+      state.formFields[index].sessions.push(createEmptySession());
+      renderFormFieldsList();
+    });
+  });
+
+  container.querySelectorAll('.session-remove').forEach(button => {
+    button.addEventListener('click', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.index);
+      const sessionIndex = parseInt(e.target.dataset.sessionIndex);
+      if (state.formFields[fieldIndex] && state.formFields[fieldIndex].sessions) {
+        state.formFields[fieldIndex].sessions.splice(sessionIndex, 1);
+      }
+      renderFormFieldsList();
+    });
+  });
+
+  container.querySelectorAll('.session-title').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.index);
+      const sessionIndex = parseInt(e.target.dataset.sessionIndex);
+      if (state.formFields[fieldIndex]?.sessions?.[sessionIndex]) {
+        state.formFields[fieldIndex].sessions[sessionIndex].title = e.target.value;
+      }
+    });
+  });
+
+  container.querySelectorAll('.session-start').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.index);
+      const sessionIndex = parseInt(e.target.dataset.sessionIndex);
+      if (state.formFields[fieldIndex]?.sessions?.[sessionIndex]) {
+        state.formFields[fieldIndex].sessions[sessionIndex].start = e.target.value;
+      }
+    });
+  });
+
+  container.querySelectorAll('.session-end').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.index);
+      const sessionIndex = parseInt(e.target.dataset.sessionIndex);
+      if (state.formFields[fieldIndex]?.sessions?.[sessionIndex]) {
+        state.formFields[fieldIndex].sessions[sessionIndex].end = e.target.value;
+      }
+    });
+  });
+
+  container.querySelectorAll('.session-capacity').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.index);
+      const sessionIndex = parseInt(e.target.dataset.sessionIndex);
+      if (state.formFields[fieldIndex]?.sessions?.[sessionIndex]) {
+        const value = parseInt(e.target.value, 10);
+        state.formFields[fieldIndex].sessions[sessionIndex].capacity = Number.isFinite(value) && value > 0 ? value : 0;
+      }
+      updateTotalCapacitySummary();
+    });
+  });
+
+  container.querySelectorAll('.session-notes').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const fieldIndex = parseInt(e.target.dataset.index);
+      const sessionIndex = parseInt(e.target.dataset.sessionIndex);
+      if (state.formFields[fieldIndex]?.sessions?.[sessionIndex]) {
+        state.formFields[fieldIndex].sessions[sessionIndex].notes = e.target.value;
+      }
+    });
+  });
+
   // Event listeners para mover campos
   container.querySelectorAll('[data-action="move-up"]').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -892,16 +1165,20 @@ function renderFormFieldsList() {
       moveFieldDown(index);
     });
   });
+
+  updateTotalCapacitySummary();
 }
 
 // Adicionar novo campo ao formulário
 function addFormField() {
   state.formFields.push({
+    id: generateId(),
     type: 'text',
     label: '',
     placeholder: '',
     required: false,
-    options: []
+    options: [],
+    sessions: []
   });
   renderFormFieldsList();
 }
@@ -1026,15 +1303,69 @@ async function savePage() {
     }
     
     const requiresPayment = document.getElementById('form-requires-payment').checked;
-    const maxParticipants = parseInt(document.getElementById('form-max-participants').value) || 0;
+
+    const normalizedFields = state.formFields.map(field => {
+      const normalized = {
+        ...field,
+        id: field.id || generateId(),
+        options: Array.isArray(field.options) ? field.options.filter(opt => opt && opt.trim()) : [],
+        sessions: Array.isArray(field.sessions) ? field.sessions : []
+      };
+
+      if (!(field.type === 'select' || field.type === 'radio' || field.type === 'checkbox-group')) {
+        delete normalized.options;
+      }
+
+      if (field.type === 'sessions') {
+        normalized.sessions = field.sessions.map(session => ({
+          id: session.id || generateId(),
+          title: session.title.trim(),
+          start: session.start,
+          end: session.end,
+          capacity: parseInt(session.capacity, 10),
+          notes: session.notes ? session.notes.trim() : ''
+        }));
+      } else {
+        delete normalized.sessions;
+      }
+
+      return normalized;
+    });
+
+    const sessionFieldMissingSessions = normalizedFields.find(f => f.type === 'sessions' && (!Array.isArray(f.sessions) || f.sessions.length === 0));
+    if (sessionFieldMissingSessions) {
+      showAlert(`O campo "${sessionFieldMissingSessions.label || 'Seleção de baterias'}" precisa ter pelo menos uma bateria cadastrada.`, 'error');
+      return returnWithReset();
+    }
+
+    const sessionFieldWithInvalidData = normalizedFields.find(f => f.type === 'sessions' && f.sessions.some(session => {
+      const hasBaseData = session.title && session.title.trim() && session.start && session.end;
+      const capacity = parseInt(session.capacity, 10);
+      const isCapacityValid = Number.isFinite(capacity) && capacity > 0;
+      let isOrderValid = true;
+      if (session.start && session.end) {
+        isOrderValid = session.start < session.end;
+      }
+      return !hasBaseData || !isCapacityValid || !isOrderValid;
+    }));
+
+    if (sessionFieldWithInvalidData) {
+      showAlert('Preencha todas as informações das baterias com horário de início/fim válidos e limite de vagas maior que zero.', 'error');
+      return returnWithReset();
+    }
+
+    const totalCapacity = calculateTotalCapacity(normalizedFields);
 
     pageData.form_config = {
       title: formTitle,
       description: formDescription,
-      fields: state.formFields,
-      requires_payment: requiresPayment,
-      max_participants: maxParticipants
+      fields: normalizedFields,
+      requires_payment: requiresPayment
     };
+
+    if (totalCapacity > 0) {
+      pageData.form_config.max_participants = totalCapacity;
+    }
     
     // Se requer pagamento, validar e adicionar dados
     if (requiresPayment) {
@@ -1371,17 +1702,132 @@ function initEventListeners() {
 
 // ============= INSCRIPTIONS MANAGER =============
 
-function loadInscriptions() {
-  const raw = localStorage.getItem('inscriptions');
-  state.inscriptions = raw ? JSON.parse(raw) : {};
-  return state.inscriptions;
+async function loadInscriptions() {
+  try {
+    const allPages = await loadPages();
+    if (!Array.isArray(allPages) || allPages.length === 0) {
+      state.inscriptions = {};
+      return state.inscriptions;
+    }
+
+    const inscriptionsByPage = {};
+
+    for (const page of allPages) {
+      const pageSlug = page.slug;
+      let inscriptionsForPage = [];
+
+      try {
+        const inscriptions = await getInscriptions(pageSlug);
+        if (Array.isArray(inscriptions) && inscriptions.length > 0) {
+          inscriptionsForPage = inscriptions.map(item => ({
+            id: item.id,
+            data: item.form_data || item.data || {},
+            timestamp: item.created_at || item.timestamp || new Date().toISOString(),
+            status: item.status || 'pending',
+            pageSlug
+          }));
+        }
+      } catch (remoteError) {
+        console.error(`Erro ao carregar inscrições do Supabase para ${pageSlug}:`, remoteError);
+      }
+
+      if (inscriptionsForPage.length === 0) {
+        const localFallback = loadInscriptionsFromLocalStorage(pageSlug);
+        if (Array.isArray(localFallback) && localFallback.length > 0) {
+          inscriptionsForPage = localFallback;
+        }
+      }
+
+      inscriptionsByPage[pageSlug] = inscriptionsForPage;
+      persistInscriptionsForPage(pageSlug, inscriptionsForPage);
+    }
+
+    state.inscriptions = inscriptionsByPage;
+    return state.inscriptions;
+  } catch (error) {
+    console.error('Erro ao carregar inscrições:', error);
+    const fallback = loadAllInscriptionsFromLegacyStorage();
+    state.inscriptions = fallback;
+    return state.inscriptions;
+  }
 }
 
 async function loadInscriptionsEditor() {
-  loadInscriptions();
+  await loadInscriptions();
   await populatePageFilter();
   updateInscriptionsStats();
   renderInscriptionsTable();
+}
+
+function loadInscriptionsFromLocalStorage(pageSlug) {
+  const inscriptions = [];
+
+  try {
+    const key = `inscriptions_${pageSlug}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(item => {
+          inscriptions.push({
+            id: item.id,
+            data: item.form_data || item.data || {},
+            timestamp: item.created_at || item.timestamp || new Date().toISOString(),
+            status: item.status || 'pending',
+            pageSlug
+          });
+        });
+      }
+    }
+  } catch (error) {
+    console.warn(`Erro ao carregar inscrições locais para ${pageSlug}:`, error);
+  }
+
+  return inscriptions;
+}
+
+function loadAllInscriptionsFromLegacyStorage() {
+  const result = {};
+
+  try {
+    const raw = localStorage.getItem('inscriptions');
+    if (!raw) return result;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return result;
+
+    Object.keys(parsed).forEach(pageSlug => {
+      if (Array.isArray(parsed[pageSlug])) {
+        result[pageSlug] = parsed[pageSlug].map(item => ({
+          id: item.id,
+          data: item.data || item.form_data || {},
+          timestamp: item.timestamp || new Date().toISOString(),
+          status: item.status || 'pending',
+          pageSlug
+        }));
+      }
+    });
+  } catch (error) {
+    console.warn('Erro ao carregar inscrições do localStorage legado:', error);
+  }
+
+  return result;
+}
+
+function persistInscriptionsForPage(pageSlug, inscriptions) {
+  try {
+    localStorage.setItem(`inscriptions_${pageSlug}`, JSON.stringify(inscriptions || []));
+  } catch (error) {
+    console.warn(`Erro ao salvar inscrições locais (${pageSlug}):`, error);
+  }
+
+  try {
+    const legacyRaw = localStorage.getItem('inscriptions');
+    const legacy = legacyRaw ? JSON.parse(legacyRaw) : {};
+    legacy[pageSlug] = inscriptions || [];
+    localStorage.setItem('inscriptions', JSON.stringify(legacy));
+  } catch (error) {
+    console.warn('Erro ao salvar inscrições no armazenamento legado:', error);
+  }
 }
 
 function updateInscriptionsStats() {
@@ -1558,39 +2004,44 @@ function renderInscriptionsTable() {
   // Event listeners
   tbody.querySelectorAll('.view-inscription').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const slug = e.target.dataset.slug;
+      const button = e.currentTarget;
+      const id = button.dataset.id;
+      const slug = button.dataset.slug;
       showInscriptionModal(slug, id);
     });
   });
   
   tbody.querySelectorAll('.confirm-inscription').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const slug = e.target.dataset.slug;
+      const button = e.currentTarget;
+      const id = button.dataset.id;
+      const slug = button.dataset.slug;
       confirmInscription(slug, id);
     });
   });
   
   tbody.querySelectorAll('.unconfirm-inscription').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const slug = e.target.dataset.slug;
+      const button = e.currentTarget;
+      const id = button.dataset.id;
+      const slug = button.dataset.slug;
       unconfirmInscription(slug, id);
     });
   });
   
   tbody.querySelectorAll('.delete-inscription').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const id = parseInt(e.target.dataset.id);
-      const slug = e.target.dataset.slug;
+      const button = e.currentTarget;
+      const id = button.dataset.id;
+      const slug = button.dataset.slug;
       deleteInscription(slug, id);
     });
   });
 }
 
 function showInscriptionModal(pageSlug, id) {
-  const inscription = state.inscriptions[pageSlug].find(i => i.id === id);
+  const list = state.inscriptions[pageSlug] || [];
+  const inscription = list.find(i => String(i.id) === String(id));
   if (!inscription) return;
   
   const page = state.pages.find(p => p.slug === pageSlug);
@@ -1631,34 +2082,72 @@ function closeInscriptionModal() {
   document.getElementById('inscription-modal').classList.remove('active');
 }
 
-function confirmInscription(pageSlug, id) {
-  const inscription = state.inscriptions[pageSlug].find(i => i.id === id);
-  if (inscription) {
-    inscription.status = 'confirmed';
-    localStorage.setItem('inscriptions', JSON.stringify(state.inscriptions));
-    updateInscriptionsStats();
-    renderInscriptionsTable();
-    showAlert('Inscrição confirmada!');
+async function confirmInscription(pageSlug, id) {
+  const list = state.inscriptions[pageSlug] || [];
+  const inscription = list.find(i => String(i.id) === String(id));
+  if (!inscription) return;
+
+  try {
+    await updateInscriptionStatus(id, 'confirmed');
+  } catch (error) {
+    console.error('Erro ao confirmar inscrição no Supabase:', error);
+    showAlert('Não foi possível sincronizar com o servidor. Alteração aplicada localmente.', 'warning');
   }
+
+  inscription.status = 'confirmed';
+  state.inscriptions[pageSlug] = list;
+  persistInscriptionsForPage(pageSlug, list);
+  updateInscriptionsStats();
+  renderInscriptionsTable();
+  showAlert('Inscrição confirmada!');
 }
 
-function unconfirmInscription(pageSlug, id) {
-  const inscription = state.inscriptions[pageSlug].find(i => i.id === id);
-  if (inscription) {
-    inscription.status = 'pending';
-    localStorage.setItem('inscriptions', JSON.stringify(state.inscriptions));
-    updateInscriptionsStats();
-    renderInscriptionsTable();
-    showAlert('Inscrição marcada como pendente.');
+async function unconfirmInscription(pageSlug, id) {
+  const list = state.inscriptions[pageSlug] || [];
+  const inscription = list.find(i => String(i.id) === String(id));
+  if (!inscription) return;
+
+  try {
+    await updateInscriptionStatus(id, 'pending');
+  } catch (error) {
+    console.error('Erro ao atualizar inscrição no Supabase:', error);
+    showAlert('Não foi possível sincronizar com o servidor. Alteração aplicada localmente.', 'warning');
   }
+
+  inscription.status = 'pending';
+  state.inscriptions[pageSlug] = list;
+  persistInscriptionsForPage(pageSlug, list);
+  updateInscriptionsStats();
+  renderInscriptionsTable();
+  showAlert('Inscrição marcada como pendente.');
 }
 
-function deleteInscription(pageSlug, id) {
-  if (confirm('Deseja realmente excluir esta inscrição?')) {
-    state.inscriptions[pageSlug] = state.inscriptions[pageSlug].filter(i => i.id !== id);
-    localStorage.setItem('inscriptions', JSON.stringify(state.inscriptions));
-    updateInscriptionsStats();
-    renderInscriptionsTable();
+async function deleteInscription(pageSlug, id) {
+  if (!confirm('Deseja realmente excluir esta inscrição?')) {
+    return;
+  }
+
+  const list = state.inscriptions[pageSlug] || [];
+  const index = list.findIndex(i => String(i.id) === String(id));
+  if (index === -1) return;
+
+  list.splice(index, 1);
+  state.inscriptions[pageSlug] = list;
+
+  let syncedWithSupabase = false;
+  try {
+    await deleteInscriptionSupabase(id);
+    syncedWithSupabase = true;
+  } catch (error) {
+    console.error('Erro ao remover inscrição no Supabase:', error);
+    showAlert('Não foi possível sincronizar com o servidor. Alteração aplicada localmente.', 'warning');
+  }
+
+  persistInscriptionsForPage(pageSlug, list);
+  updateInscriptionsStats();
+  renderInscriptionsTable();
+  
+  if (syncedWithSupabase) {
     showAlert('Inscrição excluída.');
   }
 }
@@ -1725,8 +2214,8 @@ function clearAllInscriptions() {
   if (confirm(`ATENÇÃO: Isso irá apagar TODAS as inscrições de "${pageName}" permanentemente. Deseja continuar?`)) {
     if (confirm('Tem certeza absoluta? Esta ação não pode ser desfeita!')) {
       // Remover apenas as inscrições da página selecionada
-      delete state.inscriptions[filterPage];
-      localStorage.setItem('inscriptions', JSON.stringify(state.inscriptions));
+      state.inscriptions[filterPage] = [];
+      persistInscriptionsForPage(filterPage, []);
       
       updateInscriptionsStats();
       renderInscriptionsTable();
@@ -1982,19 +2471,20 @@ function checkAuth() {
 
 // ============= INIT =============
 
-function initAdmin() {
+async function initAdmin() {
   if (!checkAuth()) return;
   
   initTabs();
-  loadHomeEditor();
-  loadPagesEditor();
-  loadInscriptionsEditor();
+  await loadHomeEditor();
+  await loadPagesEditor();
+  await loadInscriptionsEditor();
   loadImagesEditor();
   initPreview();
   initEventListeners();
+  initSubsectionAccordions();
   
   // Aplicar tema inicial
-  applyThemeToAdmin(state.homeContent.theme);
+  applyThemeToAdmin(state.homeContent?.theme);
 }
 
 // Executar imediatamente se DOM já estiver carregado, ou aguardar

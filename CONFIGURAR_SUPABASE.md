@@ -179,6 +179,10 @@ CREATE POLICY "Admin pode ver inscrições"
 CREATE POLICY "Admin pode atualizar inscrições"
   ON inscriptions FOR UPDATE
   USING (true);
+
+CREATE POLICY "Admin pode deletar inscrições"
+  ON inscriptions FOR DELETE
+  USING (true);
 ```
 
 **⚠️ IMPORTANTE**: Essas políticas permitem acesso sem autenticação. Para produção real, você deve implementar autenticação (veja `SUPABASE_SETUP.md` para detalhes).

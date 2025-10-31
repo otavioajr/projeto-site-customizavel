@@ -126,6 +126,7 @@ DROP POLICY IF EXISTS "Admin pode editar home" ON home_content;
 DROP POLICY IF EXISTS "Permitir inserção de inscrições" ON inscriptions;
 DROP POLICY IF EXISTS "Admin pode ver inscrições" ON inscriptions;
 DROP POLICY IF EXISTS "Admin pode atualizar inscrições" ON inscriptions;
+DROP POLICY IF EXISTS "Admin pode deletar inscrições" ON inscriptions;
 
 -- Permitir leitura pública de páginas ativas
 CREATE POLICY "Páginas ativas são públicas"
@@ -159,6 +160,10 @@ CREATE POLICY "Admin pode ver inscrições"
 
 CREATE POLICY "Admin pode atualizar inscrições"
   ON inscriptions FOR UPDATE
+  USING (true);
+
+CREATE POLICY "Admin pode deletar inscrições"
+  ON inscriptions FOR DELETE
   USING (true);
 
 -- ============================================

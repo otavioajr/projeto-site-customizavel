@@ -1097,14 +1097,13 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="form-max-participants">Limite de Pessoas (Vagas Disponíveis)</label>
-              <input type="number" id="form-max-participants" placeholder="0" min="0">
-              <span class="form-hint">👥 Número máximo de pessoas que podem se inscrever. Deixe vazio ou 0 para ilimitado. Quando atingir o limite, novas inscrições serão bloqueadas automaticamente</span>
-            </div>
-
             <h4 style="margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm);">Campos do Formulário</h4>
             <div id="form-fields-list"></div>
+            <div class="form-group" id="form-total-capacity-wrapper" style="display: none;">
+              <label>Total de vagas (calculado automaticamente)</label>
+              <div class="session-total-summary" id="form-total-capacity-value">0</div>
+              <span class="form-hint">👥 Somatório das vagas de todas as baterias deste formulário.</span>
+            </div>
             <button type="button" class="btn btn-secondary btn-small" id="add-form-field">+ Adicionar Campo</button>
           </div>
           

@@ -490,6 +490,29 @@
     </div>
   </div>
 
-  <script src="/assets/js/confirmacao.js"></script>
+  <script>
+    (async () => {
+      const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
+
+      try {
+        await new Promise((resolve, reject) => {
+          const configScript = document.createElement('script');
+          configScript.src = configSrc;
+          configScript.onload = resolve;
+          configScript.onerror = reject;
+          document.head.appendChild(configScript);
+        });
+      } catch (error) {
+        console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
+        window.SUPABASE_URL = window.SUPABASE_URL || '';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+      }
+
+      const confirmationScript = document.createElement('script');
+      confirmationScript.type = 'module';
+      confirmationScript.src = '/assets/js/confirmacao.js?v=2';
+      document.body.appendChild(confirmationScript);
+    })();
+  </script>
 </body>
 </html>
