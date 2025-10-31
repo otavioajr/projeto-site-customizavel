@@ -128,7 +128,7 @@ function displayInscription(inscription, page) {
     inscriptionNameEl.textContent = candidateName;
   }
 
-  setupPaymentSection(page, inscription, candidateName);
+  setupPaymentSection(page, inscription, candidateName, inscriptionNumber);
 }
 
 function extractCandidateName(formData) {
@@ -147,7 +147,7 @@ function extractCandidateName(formData) {
   return candidateName;
 }
 
-function setupPaymentSection(page, inscription, candidateName) {
+function setupPaymentSection(page, inscription, candidateName, inscriptionNumber) {
   const requiresPayment = page.form_config?.requires_payment || false;
   const paymentConfig = page.form_config?.payment;
 
@@ -183,7 +183,7 @@ function setupPaymentSection(page, inscription, candidateName) {
     const whatsappLink = document.getElementById('whatsapp-link');
     if (whatsappLink) {
       const whatsappMessage = encodeURIComponent(
-        `Olá! Gostaria de pagar a inscrição #${inscription.id} (${candidateName}) com cartão de crédito.`
+        `Olá! Gostaria de pagar a inscrição #${inscriptionNumber} (${candidateName}) com cartão de crédito.`
       );
       whatsappLink.href = `https://wa.me/${paymentConfig.whatsapp}?text=${whatsappMessage}`;
     }
