@@ -1071,7 +1071,35 @@
               <textarea id="form-description" placeholder="Preencha o formulário abaixo para se inscrever..."></textarea>
               <span class="form-hint">📝 Instruções para quem vai preencher o formulário. As inscrições aparecerão na aba "Inscrições" do admin (opcional)</span>
             </div>
-            
+
+            <!-- Configuração de Inscrição em Grupo -->
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="form-allow-multiple-participants"> Permitir inscrição em grupo
+              </label>
+              <span class="form-hint">👥 Permite que usuários inscrevam múltiplas pessoas em uma única submissão (famílias, grupos, etc.)</span>
+            </div>
+
+            <!-- Campos de Grupo (aparecem quando permitir grupo está ativado) -->
+            <div id="group-fields" style="display: none;">
+              <div class="form-group">
+                <label for="group-min-participants">Mínimo de participantes</label>
+                <input type="number" id="group-min-participants" value="1" min="1" max="100">
+                <span class="form-hint">👥 Quantidade mínima de pessoas por inscrição (normalmente 1)</span>
+              </div>
+              <div class="form-group">
+                <label for="group-max-participants">Máximo de participantes</label>
+                <input type="number" id="group-max-participants" value="10" min="1" max="100">
+                <span class="form-hint">👥 Quantidade máxima de pessoas por inscrição (recomendado: 10)</span>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" id="group-same-session" checked> Todos participantes na mesma bateria
+                </label>
+                <span class="form-hint">🔒 Quando ativado, todos os participantes do grupo devem estar na mesma bateria/sessão</span>
+              </div>
+            </div>
+
             <div class="form-group">
               <label>
                 <input type="checkbox" id="form-requires-payment"> Requer Pagamento (PIX)
@@ -1095,6 +1123,13 @@
                 <input type="text" id="payment-whatsapp" placeholder="5511999999999">
                 <span class="form-hint">📱 Número para contato sobre pagamento com cartão. Formato: 55 + DDD + número (sem espaços) - Ex: 5511999999999 (opcional)</span>
               </div>
+            </div>
+
+            <!-- Limite de Vagas Manual (quando não há sessões) -->
+            <div class="form-group" id="form-max-participants-wrapper" style="display: none;">
+              <label for="form-max-participants">Limite total de vagas</label>
+              <input type="number" id="form-max-participants" value="0" min="0" placeholder="0 = ilimitado">
+              <span class="form-hint">👥 Número máximo de participantes. Use 0 para ilimitado. Este campo aparece quando NÃO há baterias/sessões.</span>
             </div>
 
             <h4 style="margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm);">Campos do Formulário</h4>

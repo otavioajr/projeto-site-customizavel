@@ -6,8 +6,12 @@ import {
   savePage as savePageSupabase,
   deletePage as deletePageSupabase,
   getInscriptions,
+  getInscriptionGroups,
+  getInscriptionGroup,
   updateInscriptionStatus,
+  updateGroupStatus,
   deleteInscription as deleteInscriptionSupabase,
+  deleteInscriptionGroup,
   uploadImage as uploadImageSupabase,
   listImages as listImagesSupabase,
   deleteImage as deleteImageSupabase
@@ -189,15 +193,26 @@ function calculateTotalCapacity(fields) {
 function updateTotalCapacitySummary() {
   const wrapper = document.getElementById('form-total-capacity-wrapper');
   const valueEl = document.getElementById('form-total-capacity-value');
+  const maxParticipantsWrapper = document.getElementById('form-max-participants-wrapper');
+  
   if (!wrapper || !valueEl) return;
 
   const total = calculateTotalCapacity(state.formFields);
+  
   if (total > 0) {
+    // Há baterias/sessões: mostra total calculado, esconde campo manual
     valueEl.textContent = total;
     wrapper.style.display = 'block';
+    if (maxParticipantsWrapper) {
+      maxParticipantsWrapper.style.display = 'none';
+    }
   } else {
+    // NÃO há baterias: esconde total calculado, mostra campo manual
     valueEl.textContent = '0';
     wrapper.style.display = 'none';
+    if (maxParticipantsWrapper) {
+      maxParticipantsWrapper.style.display = 'block';
+    }
   }
 }
 
@@ -779,13 +794,45 @@ function renderPagesList() {
   
   // Event listeners
   container.querySelectorAll('.toggle-switch input').forEach(toggle => {
-    toggle.addEventListener('change', (e) => {
-      const id = e.target.dataset.id;
-      const page = state.pages.find(p => p.id === id);
-      if (page) {
-        page.is_active = e.target.checked;
-        savePages(state.pages);
-        showAlert(`Página ${page.is_active ? 'ativada' : 'desativada'}.`);
+    toggle.addEventListener('change', async (e) => {
+      const checkbox = e.currentTarget;
+      const id = checkbox.dataset.id;
+      const pageIndex = state.pages.findIndex(p => p.id === id);
+      if (pageIndex === -1) {
+        return;
+      }
+
+      const page = state.pages[pageIndex];
+      const previousStatus = Boolean(page.is_active);
+      const newStatus = Boolean(checkbox.checked);
+
+      if (previousStatus === newStatus) {
+        return;
+      }
+
+      const payload = { ...page, is_active: newStatus };
+
+      checkbox.disabled = true;
+      page.is_active = newStatus;
+
+      try {
+        const savedPage = await savePageSupabase(payload);
+        state.pages[pageIndex] = savedPage || payload;
+        await savePages(state.pages);
+        showAlert(`Página ${newStatus ? 'ativada' : 'desativada'}.`);
+        updatePreviewSelector();
+
+        const activeTab = document.querySelector('.admin-tab.active');
+        if (activeTab && activeTab.dataset.tab === 'pages') {
+          refreshPreview();
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar status da página:', error);
+        page.is_active = previousStatus;
+        checkbox.checked = previousStatus;
+        showAlert('Erro ao atualizar a página. Tente novamente.', 'error');
+      } finally {
+        checkbox.disabled = false;
       }
     });
   });
@@ -845,7 +892,23 @@ function showPageForm(page = null) {
         document.getElementById('payment-whatsapp').value = page.form_config.payment.whatsapp || '';
       }
 
+      // Campos de grupo
+      const allowMultipleParticipants = page.form_config?.allow_multiple_participants || false;
+      document.getElementById('form-allow-multiple-participants').checked = allowMultipleParticipants;
+      toggleGroupFields(allowMultipleParticipants);
+
+      if (allowMultipleParticipants && page.form_config?.group_config) {
+        document.getElementById('group-min-participants').value = page.form_config.group_config.min_participants || 1;
+        document.getElementById('group-max-participants').value = page.form_config.group_config.max_participants || 10;
+        document.getElementById('group-same-session').checked = page.form_config.group_config.same_session_required !== false; // default true
+      }
+
       state.formFields = (page.form_config?.fields || []).map(normalizeFieldForState);
+      
+      // Carregar limite manual de vagas (quando não há sessões)
+      const manualMaxParticipants = page.form_config?.max_participants || 0;
+      document.getElementById('form-max-participants').value = manualMaxParticipants;
+      
       renderFormFieldsList();
     } else {
       // Preencher URL do Canva
@@ -871,6 +934,11 @@ function showPageForm(page = null) {
     document.getElementById('payment-value').value = '';
     document.getElementById('payment-pix-key').value = '';
     document.getElementById('payment-whatsapp').value = '';
+    document.getElementById('form-allow-multiple-participants').checked = false;
+    document.getElementById('group-min-participants').value = '1';
+    document.getElementById('group-max-participants').value = '10';
+    document.getElementById('group-same-session').checked = true;
+    document.getElementById('form-max-participants').value = '0';
     document.getElementById('page-order').value = state.pages.length + 1;
     document.getElementById('page-seo-title').value = '';
     document.getElementById('page-seo-desc').value = '';
@@ -878,6 +946,7 @@ function showPageForm(page = null) {
     state.formFields = [];
     toggleFormFields(false);
     togglePaymentFields(false);
+    toggleGroupFields(false);
     renderFormFieldsList();
   }
   
@@ -908,6 +977,12 @@ function toggleFormFields(isForm) {
 function togglePaymentFields(requiresPayment) {
   const paymentFields = document.getElementById('payment-fields');
   paymentFields.style.display = requiresPayment ? 'block' : 'none';
+}
+
+// Toggle campos de grupo
+function toggleGroupFields(allowMultipleParticipants) {
+  const groupFields = document.getElementById('group-fields');
+  groupFields.style.display = allowMultipleParticipants ? 'block' : 'none';
 }
 
 // Renderizar lista de campos do formulário
@@ -1364,7 +1439,16 @@ async function savePage() {
     };
 
     if (totalCapacity > 0) {
+      // Há baterias: usar capacidade calculada
       pageData.form_config.max_participants = totalCapacity;
+    } else {
+      // NÃO há baterias: usar campo manual
+      const manualMaxParticipants = parseInt(document.getElementById('form-max-participants').value, 10);
+      if (Number.isFinite(manualMaxParticipants) && manualMaxParticipants >= 0) {
+        pageData.form_config.max_participants = manualMaxParticipants;
+      } else {
+        pageData.form_config.max_participants = 0; // 0 = ilimitado
+      }
     }
     
     // Se requer pagamento, validar e adicionar dados
@@ -1388,6 +1472,34 @@ async function savePage() {
         pix_key: pixKey,
         whatsapp: whatsapp
       };
+    }
+
+    // Se permitir inscrição em grupo, adicionar configuração
+    const allowMultipleParticipants = document.getElementById('form-allow-multiple-participants').checked;
+    if (allowMultipleParticipants) {
+      const minParticipants = parseInt(document.getElementById('group-min-participants').value, 10);
+      const maxParticipants = parseInt(document.getElementById('group-max-participants').value, 10);
+      const sameSessionRequired = document.getElementById('group-same-session').checked;
+
+      // Validações
+      if (!Number.isFinite(minParticipants) || minParticipants < 1) {
+        showAlert('O mínimo de participantes deve ser pelo menos 1.', 'error');
+        return returnWithReset();
+      }
+
+      if (!Number.isFinite(maxParticipants) || maxParticipants < minParticipants) {
+        showAlert('O máximo de participantes deve ser maior ou igual ao mínimo.', 'error');
+        return returnWithReset();
+      }
+
+      pageData.form_config.allow_multiple_participants = true;
+      pageData.form_config.group_config = {
+        min_participants: minParticipants,
+        max_participants: maxParticipants,
+        same_session_required: sameSessionRequired
+      };
+    } else {
+      pageData.form_config.allow_multiple_participants = false;
     }
   } else {
     // Validações do Canva
@@ -1670,7 +1782,12 @@ function initEventListeners() {
   document.getElementById('form-requires-payment').addEventListener('change', (e) => {
     togglePaymentFields(e.target.checked);
   });
-  
+
+  // Toggle grupo
+  document.getElementById('form-allow-multiple-participants').addEventListener('change', (e) => {
+    toggleGroupFields(e.target.checked);
+  });
+
   // Adicionar campo ao formulário
   document.getElementById('add-form-field').addEventListener('click', addFormField);
   
@@ -2058,6 +2175,44 @@ function showInscriptionModal(pageSlug, id) {
       <div class="modal-data-value">${date}</div>
     </div>
   `;
+  
+  // Adicionar dados do responsável SE existirem (quando responsável não participa)
+  if (inscription.data._responsible_name || inscription.data._responsible_email || inscription.data._responsible_phone) {
+    modalContent += `<div style="margin: 1rem 0; padding: 0.5rem; background: #e3f2fd; border-left: 3px solid #2196f3;">
+      <strong>📋 Dados do Responsável pela Inscrição:</strong>
+    </div>`;
+    
+    if (inscription.data._responsible_name) {
+      modalContent += `
+        <div class="modal-data-item">
+          <span class="modal-data-label">Nome do Responsável</span>
+          <div class="modal-data-value">${inscription.data._responsible_name}</div>
+        </div>
+      `;
+    }
+    
+    if (inscription.data._responsible_email) {
+      modalContent += `
+        <div class="modal-data-item">
+          <span class="modal-data-label">Email do Responsável</span>
+          <div class="modal-data-value">${inscription.data._responsible_email}</div>
+        </div>
+      `;
+    }
+    
+    if (inscription.data._responsible_phone) {
+      modalContent += `
+        <div class="modal-data-item">
+          <span class="modal-data-label">Telefone do Responsável</span>
+          <div class="modal-data-value">${inscription.data._responsible_phone}</div>
+        </div>
+      `;
+    }
+    
+    modalContent += `<div style="margin: 1rem 0; padding: 0.5rem; background: #fff3e0; border-left: 3px solid #ff9800;">
+      <strong>👤 Dados do Participante:</strong>
+    </div>`;
+  }
   
   Object.keys(inscription.data).forEach(key => {
     if (!key.startsWith('_')) {

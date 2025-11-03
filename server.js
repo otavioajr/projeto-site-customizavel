@@ -11,6 +11,16 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Ignorar arquivos desnecessários
+app.use((req, res, next) => {
+  const ext = path.extname(req.path).toLowerCase();
+  if (['.md', '.sql', '.sh', '.txt', '.example'].includes(ext)) {
+    return res.status(404).send('Not Found');
+  }
+  next();
+});
+
 app.use(express.static('.')); // Servir arquivos estáticos do projeto
 
 // Criar pasta uploads se não existir

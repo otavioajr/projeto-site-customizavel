@@ -1,6 +1,27 @@
 {
-  "delay": 500,
-  "watch": ["*.js", "assets/**/*.js"],
-  "ignore": ["node_modules/**", "uploads/**"],
-  "ext": "js,json"
+  "delay": 800,
+  "watch": ["dev-server.js", "server.js", "api/"],
+  "ext": "js,json",
+  "legacyWatch": true,
+  "signal": "SIGTERM",
+  "restartable": "rs",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "ignore": [
+    "node_modules/**",
+    "uploads/**",
+    "assets/**",
+    "*.md",
+    "*.txt",
+    "*.sql",
+    "*.sh",
+    "*.example.*",
+    ".git/**",
+    ".env*",
+    "vercel.json",
+    "netlify.toml",
+    "README*",
+    "*.lock"
+  ]
 }

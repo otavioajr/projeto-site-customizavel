@@ -1,5 +1,11 @@
 // page.js - Renderização de páginas internas (Canva e Formulários)
-import { getAllPages, saveInscription as saveInscriptionSupabase, getHomeContent, getInscriptions } from './supabase.js';
+import { 
+  getAllPages, 
+  saveInscription as saveInscriptionSupabase, 
+  saveMultipleInscriptions,
+  getHomeContent, 
+  getInscriptions 
+} from './supabase.js';
 
 // ==================== HELPERS ====================
 function showErrorModal(message) {
@@ -98,6 +104,176 @@ function buildSessionDisplay(session) {
     display += display ? ` – ${session.notes}` : session.notes;
   }
   return display;
+}
+
+// Verifica se um campo é "por participante" (repete para cada pessoa)
+// Baseado em palavras-chave EXPLÍCITAS no label do campo
+function isParticipantField(field) {
+  const label = (field.label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Palavras-chave que indicam campo REPETÍVEL (para cada participante)
+  const participantKeywords = ['participante', 'pessoa'];
+  
+  // Palavras-chave que indicam campo ÚNICO (do responsável/organizador)
+  const responsibleKeywords = ['responsavel', 'organizador'];
+  
+  // Se tem palavra de participante, é campo repetível
+  if (participantKeywords.some(keyword => label.includes(keyword))) {
+    return true;
+  }
+  
+  // Se tem palavra de responsável, é campo único
+  if (responsibleKeywords.some(keyword => label.includes(keyword))) {
+    return false;
+  }
+  
+  // Default: campos sem palavra-chave são do responsável (únicos)
+  return false;
+}
+
+// Separa campos em dois grupos: campos do grupo vs. campos por participante
+function categorizeFields(fields) {
+  const groupFields = [];
+  const participantFields = [];
+
+  fields.forEach(field => {
+    // Sessions sempre são do grupo (FASE 1: todos na mesma bateria)
+    if (field.type === 'sessions') {
+      groupFields.push(field);
+    } else if (isParticipantField(field)) {
+      participantFields.push(field);
+    } else {
+      groupFields.push(field);
+    }
+  });
+
+  return { groupFields, participantFields };
+}
+
+// Renderiza um único campo de formulário
+function renderSingleField(field, index, options = {}) {
+  const { prefix = '', sessionUsage = {}, maxParticipants = 0, remainingTotal = null, blockedSessionFields = [], requiredSessionFieldIds = [] } = options;
+  const fieldId = prefix ? `${prefix}-field-${index}` : `field-${index}`;
+  const fieldName = prefix ? `${prefix}_${field.id}` : field.id;
+  const requiredLabel = field.required ? '<span style="color: red;">*</span>' : '';
+  let inputHtml = '';
+
+  switch (field.type) {
+    case 'textarea':
+      inputHtml = `<textarea id="${fieldId}" name="${fieldName}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''}></textarea>`;
+      break;
+
+    case 'select': {
+      const options = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+      inputHtml = `
+        <select id="${fieldId}" name="${fieldName}" ${field.required ? 'required' : ''}>
+          <option value="">Selecione...</option>
+          ${options}
+        </select>
+      `;
+      break;
+    }
+
+    case 'radio':
+      inputHtml = field.options.map((opt, i) => `
+        <label class="radio-label">
+          <input type="radio" name="${fieldName}" value="${opt}" ${field.required && i === 0 ? 'required' : ''}> ${opt}
+        </label>
+      `).join('');
+      break;
+
+    case 'checkbox':
+      inputHtml = `
+        <label class="checkbox-label">
+          <input type="checkbox" id="${fieldId}" name="${fieldName}" ${field.required ? 'required' : ''}> ${field.placeholder || 'Aceito'}
+        </label>
+      `;
+      break;
+
+    case 'checkbox-group':
+      inputHtml = field.options.map(opt => `
+        <label class="checkbox-label">
+          <input type="checkbox" name="${fieldName}[]" value="${opt}"> ${opt}
+        </label>
+      `).join('');
+      break;
+
+    case 'sessions': {
+      const sessions = field.sessions || [];
+      const usageForField = sessionUsage[field.id] || {};
+      let requiredAssigned = false;
+      let hasAvailableSessions = false;
+      const globalRemaining = maxParticipants > 0 ? remainingTotal : null;
+
+      const sessionOptionsHtml = sessions.map(session => {
+        const used = usageForField[session.id] || 0;
+        const remainingCapacity = Math.max(session.capacity - used, 0);
+        const availableSlots = globalRemaining !== null
+          ? Math.min(remainingCapacity, globalRemaining)
+          : remainingCapacity;
+        const isFull = availableSlots <= 0;
+        const availabilityText = isFull
+          ? 'Esgotado'
+          : `${availableSlots} ${availableSlots === 1 ? 'vaga' : 'vagas'}`;
+        let requiredAttr = '';
+
+        if (!isFull && field.required && !requiredAssigned) {
+          requiredAttr = 'required';
+          requiredAssigned = true;
+        }
+
+        if (!isFull) {
+          hasAvailableSessions = true;
+        }
+
+        const timeStart = formatSessionTime(session.start);
+        const timeEnd = formatSessionTime(session.end);
+        const timeLabel = timeStart && timeEnd ? `${timeStart} - ${timeEnd}` : '';
+
+        return `
+          <label class="session-option ${isFull ? 'session-option--full' : ''}">
+            <input type="radio" name="session-${field.id}" value="${session.id}" ${requiredAttr} ${isFull ? 'disabled' : ''}>
+            <div class="session-option-content">
+              <span class="session-option-title">${session.title || 'Bateria'}</span>
+              ${timeLabel ? `<span class="session-option-time">${timeLabel}</span>` : ''}
+              <span class="session-option-capacity ${isFull ? 'session-option-capacity--full' : ''}">${availabilityText}</span>
+              ${session.notes ? `<span class="session-option-notes">${session.notes}</span>` : ''}
+            </div>
+          </label>
+        `;
+      }).join('');
+
+      if (!hasAvailableSessions) {
+        blockedSessionFields.push({ id: field.id, label: field.label || 'Seleção de baterias' });
+      }
+
+      const emptyState = sessions.length === 0
+        ? '<p class="session-group-warning">Nenhuma bateria foi configurada para este campo.</p>'
+        : '';
+
+      const warningState = !hasAvailableSessions
+        ? '<p class="session-group-warning">Todas as vagas para esta seleção estão esgotadas.</p>'
+        : '';
+
+      inputHtml = `
+        <div class="sessions-group" data-field-id="${field.id}">
+          ${sessionOptionsHtml || emptyState}
+          ${warningState}
+        </div>
+      `;
+      break;
+    }
+
+    default:
+      inputHtml = `<input type="${field.type}" id="${fieldId}" name="${fieldName}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''}>`;
+  }
+
+  return `
+    <div class="form-field">
+      <label ${field.type !== 'radio' && field.type !== 'checkbox-group' && field.type !== 'sessions' ? `for="${fieldId}"` : ''}>${field.label} ${requiredLabel}</label>
+      ${inputHtml}
+    </div>
+  `;
 }
 
 // ==================== CARREGAMENTO ====================
@@ -229,6 +405,7 @@ async function renderForm(container, page) {
 
     inscriptions.forEach(inscription => {
       const formData = inscription?.form_data || inscription?.data || {};
+      const groupSize = parseInt(formData?._group_size, 10) || 1; // Considerar _group_size para contagem
       sessionFields.forEach(field => {
         const storageKey = `_session_${field.id}`;
         const selectedSessionId = formData?.[storageKey];
@@ -236,142 +413,95 @@ async function renderForm(container, page) {
           if (!sessionUsage[field.id][selectedSessionId]) {
             sessionUsage[field.id][selectedSessionId] = 0;
           }
-          sessionUsage[field.id][selectedSessionId] += 1;
+          sessionUsage[field.id][selectedSessionId] += groupSize; // Somar group_size em vez de 1
         }
       });
     });
   }
 
-  const totalInscriptions = Array.isArray(inscriptions) ? inscriptions.length : 0;
+  // Calcular total de participantes (não de inscrições) para capacidade correta
+  const totalInscriptions = Array.isArray(inscriptions)
+    ? inscriptions.reduce((sum, inscription) => {
+        const formData = inscription?.form_data || inscription?.data || {};
+        const groupSize = parseInt(formData?._group_size, 10) || 1;
+        return sum + groupSize;
+      }, 0)
+    : 0;
   const remainingTotal = maxParticipants > 0 ? Math.max(maxParticipants - totalInscriptions, 0) : null;
   const sportFull = maxParticipants > 0 && remainingTotal === 0;
 
   const blockedSessionFields = [];
   const requiredSessionFieldIds = sessionFields.filter(field => field.required).map(field => field.id);
 
+  // Detectar se permite inscrição em grupo
+  const allowMultipleParticipants = config.allow_multiple_participants || false;
+  const groupConfig = config.group_config || {};
+  const minParticipants = groupConfig.min_participants || 1;
+  const maxParticipantsPerGroup = groupConfig.max_participants || 10;
+
   let fieldsHtml = '';
-  normalizedFields.forEach((field, index) => {
-    const fieldId = `field-${index}`;
-    const requiredLabel = field.required ? '<span style="color: red;">*</span>' : '';
-    let inputHtml = '';
 
-    switch (field.type) {
-      case 'textarea':
-        inputHtml = `<textarea id="${fieldId}" name="${field.id}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''}></textarea>`;
-        break;
+  if (allowMultipleParticipants) {
+    // MODO GRUPO: Renderizar campos separados em grupo e participantes
+    const { groupFields, participantFields } = categorizeFields(normalizedFields);
 
-      case 'select': {
-        const options = field.options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-        inputHtml = `
-          <select id="${fieldId}" name="${field.id}" ${field.required ? 'required' : ''}>
-            <option value="">Selecione...</option>
-            ${options}
-          </select>
-        `;
-        break;
-      }
-
-      case 'radio':
-        inputHtml = field.options.map((opt, i) => `
-          <label class="radio-label">
-            <input type="radio" name="${field.id}" value="${opt}" ${field.required && i === 0 ? 'required' : ''}> ${opt}
-          </label>
-        `).join('');
-        break;
-
-      case 'checkbox':
-        inputHtml = `
-          <label class="checkbox-label">
-            <input type="checkbox" id="${fieldId}" name="${field.id}" ${field.required ? 'required' : ''}> ${field.placeholder || 'Aceito'}
-          </label>
-        `;
-        break;
-
-      case 'checkbox-group':
-        inputHtml = field.options.map(opt => `
-          <label class="checkbox-label">
-            <input type="checkbox" name="${field.id}[]" value="${opt}"> ${opt}
-          </label>
-        `).join('');
-        break;
-
-      case 'sessions': {
-        const sessions = field.sessions || [];
-        const usageForField = sessionUsage[field.id] || {};
-        let requiredAssigned = false;
-        let hasAvailableSessions = false;
-        const globalRemaining = maxParticipants > 0 ? remainingTotal : null;
-
-        const sessionOptionsHtml = sessions.map(session => {
-          const used = usageForField[session.id] || 0;
-          const remainingCapacity = Math.max(session.capacity - used, 0);
-          const availableSlots = globalRemaining !== null
-            ? Math.min(remainingCapacity, globalRemaining)
-            : remainingCapacity;
-          const isFull = availableSlots <= 0;
-          const availabilityText = isFull
-            ? 'Esgotado'
-            : `${availableSlots} ${availableSlots === 1 ? 'vaga' : 'vagas'}`;
-          let requiredAttr = '';
-
-          if (!isFull && field.required && !requiredAssigned) {
-            requiredAttr = 'required';
-            requiredAssigned = true;
-          }
-
-          if (!isFull) {
-            hasAvailableSessions = true;
-          }
-
-          const timeStart = formatSessionTime(session.start);
-          const timeEnd = formatSessionTime(session.end);
-          const timeLabel = timeStart && timeEnd ? `${timeStart} - ${timeEnd}` : '';
-
-          return `
-            <label class="session-option ${isFull ? 'session-option--full' : ''}">
-              <input type="radio" name="session-${field.id}" value="${session.id}" ${requiredAttr} ${isFull ? 'disabled' : ''}>
-              <div class="session-option-content">
-                <span class="session-option-title">${session.title || 'Bateria'}</span>
-                ${timeLabel ? `<span class="session-option-time">${timeLabel}</span>` : ''}
-                <span class="session-option-capacity ${isFull ? 'session-option-capacity--full' : ''}">${availabilityText}</span>
-                ${session.notes ? `<span class="session-option-notes">${session.notes}</span>` : ''}
-              </div>
-            </label>
-          `;
-        }).join('');
-
-        if (!hasAvailableSessions) {
-          blockedSessionFields.push({ id: field.id, label: field.label || 'Seleção de baterias' });
-        }
-
-        const emptyState = sessions.length === 0
-          ? '<p class="session-group-warning">Nenhuma bateria foi configurada para este campo.</p>'
-          : '';
-
-        const warningState = !hasAvailableSessions
-          ? '<p class="session-group-warning">Todas as vagas para esta seleção estão esgotadas.</p>'
-          : '';
-
-        inputHtml = `
-          <div class="sessions-group" data-field-id="${field.id}">
-            ${sessionOptionsHtml || emptyState}
-            ${warningState}
-          </div>
-        `;
-        break;
-      }
-
-      default:
-        inputHtml = `<input type="${field.type}" id="${fieldId}" name="${field.id}" placeholder="${field.placeholder || ''}" ${field.required ? 'required' : ''}>`;
+    // Campo de quantidade
+    const quantityOptions = [];
+    for (let i = minParticipants; i <= maxParticipantsPerGroup; i++) {
+      quantityOptions.push(`<option value="${i}">${i} ${i === 1 ? 'pessoa' : 'pessoas'}</option>`);
     }
-    
+
     fieldsHtml += `
-      <div class="form-field">
-        <label ${field.type !== 'radio' && field.type !== 'checkbox-group' && field.type !== 'sessions' ? `for="${fieldId}"` : ''}>${field.label} ${requiredLabel}</label>
-        ${inputHtml}
+      <div class="form-field form-field--quantity">
+        <label for="participant-quantity">Quantas pessoas vai inscrever? <span style="color: red;">*</span></label>
+        <select id="participant-quantity" name="_group_size" required>
+          <option value="">Selecione...</option>
+          ${quantityOptions.join('')}
+        </select>
+        <span class="form-hint">👥 Selecione o número de pessoas que participarão da atividade</span>
+      </div>
+      
+      <div class="form-field form-field--checkbox" style="margin-top: 15px;">
+        <label style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="responsible-participates" name="_responsible_participates" checked>
+          <span>Eu também vou participar</span>
+        </label>
+        <span class="form-hint">✅ Marque se você (responsável) também participará. Se desmarcado, você só fornece os dados de contato.</span>
       </div>
     `;
-  });
+
+    // Campos do grupo (renderizados uma vez)
+    if (groupFields.length > 0) {
+      fieldsHtml += '<div class="form-section form-section--group"><h3 class="form-section-title">Dados do Responsável</h3>';
+      groupFields.forEach((field, index) => {
+        fieldsHtml += renderSingleField(field, index, {
+          prefix: 'group',
+          sessionUsage,
+          maxParticipants,
+          remainingTotal,
+          blockedSessionFields,
+          requiredSessionFieldIds
+        });
+      });
+      fieldsHtml += '</div>';
+    }
+
+    // Container para campos de participantes (será preenchido dinamicamente via JS)
+    if (participantFields.length > 0) {
+      fieldsHtml += '<div id="participants-container" class="participants-container"></div>';
+    }
+  } else {
+    // MODO INDIVIDUAL: Renderização original
+    normalizedFields.forEach((field, index) => {
+      fieldsHtml += renderSingleField(field, index, {
+        sessionUsage,
+        maxParticipants,
+        remainingTotal,
+        blockedSessionFields,
+        requiredSessionFieldIds
+      });
+    });
+  }
 
   const blockedRequiredSessionFields = blockedSessionFields.filter(field => requiredSessionFieldIds.includes(field.id));
 
@@ -461,6 +591,54 @@ async function renderForm(container, page) {
     consentCheckbox.addEventListener('change', updateSubmitState);
   }
 
+  // Se modo grupo, adicionar lógica de renderização dinâmica de participantes
+  if (allowMultipleParticipants) {
+    const quantitySelect = form.querySelector('#participant-quantity');
+    const participantsContainer = form.querySelector('#participants-container');
+    const responsibleParticipatesCheckbox = form.querySelector('#responsible-participates');
+    const { participantFields } = categorizeFields(normalizedFields);
+
+    const renderParticipantFields = () => {
+      const quantity = parseInt(quantitySelect.value, 10);
+      const responsibleParticipates = responsibleParticipatesCheckbox ? responsibleParticipatesCheckbox.checked : true;
+      
+      participantsContainer.innerHTML = '';
+
+      if (quantity > 0) {
+        // Se responsável participa: ele é o participante 1, então criar quantity-1 campos
+        // Se responsável NÃO participa: criar quantity campos
+        const numFieldsToCreate = responsibleParticipates ? quantity - 1 : quantity;
+        const startNumber = responsibleParticipates ? 2 : 1;
+
+        for (let i = 0; i < numFieldsToCreate; i++) {
+          const participantSection = document.createElement('div');
+          participantSection.className = 'form-section form-section--participant';
+          participantSection.innerHTML = `
+            <h3 class="form-section-title">Participante ${startNumber + i}</h3>
+          `;
+
+          participantFields.forEach((field, fieldIndex) => {
+            const fieldHtml = renderSingleField(field, fieldIndex, {
+              prefix: `participant_${i}`
+            });
+            participantSection.innerHTML += fieldHtml;
+          });
+
+          participantsContainer.appendChild(participantSection);
+        }
+      }
+    };
+
+    if (quantitySelect && participantsContainer && participantFields.length > 0) {
+      quantitySelect.addEventListener('change', renderParticipantFields);
+      
+      // Reagir a mudanças no checkbox do responsável
+      if (responsibleParticipatesCheckbox) {
+        responsibleParticipatesCheckbox.addEventListener('change', renderParticipantFields);
+      }
+    }
+  }
+
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     handleFormSubmit(form, { ...config, fields: normalizedFields, max_participants: maxParticipants }, page);
@@ -485,67 +663,204 @@ async function handleFormSubmit(form, config, page) {
     const formData = new FormData(form);
     const data = {};
     const sessionSelections = [];
+    const allowMultipleParticipants = config.allow_multiple_participants || false;
 
-    config.fields.forEach((field) => {
+    // Helper para coletar valor de um campo
+    const collectFieldValue = (field, prefix = '') => {
+      const fieldName = prefix ? `${prefix}_${field.id}` : field.id;
+
       if (field.type === 'checkbox-group') {
-        const values = formData.getAll(`${field.id}[]`);
-        data[field.label] = values;
-        return;
+        return formData.getAll(`${fieldName}[]`);
       }
 
       if (field.type === 'checkbox') {
-        const input = form.querySelector(`input[name="${field.id}"]`);
-        data[field.label] = input && input.checked ? 'Sim' : 'Não';
-        return;
-      }
-
-      if (field.type === 'sessions') {
-        const selected = form.querySelector(`input[name="session-${field.id}"]:checked`);
-        if (selected) {
-          const sessionId = selected.value;
-          const session = (field.sessions || []).find(item => item.id === sessionId);
-          if (session) {
-            const display = buildSessionDisplay(session);
-            const storageKey = `_session_${field.id}`;
-            data[field.label] = display || sessionId;
-            data[storageKey] = sessionId;
-            sessionSelections.push({
-              fieldId: field.id,
-              storageKey,
-              sessionId,
-              capacity: session.capacity,
-              fieldLabel: field.label,
-              sessionTitle: session.title,
-              sessionDisplay: display
-            });
-          }
-        } else {
-          data[field.label] = '';
-        }
-        return;
+        const input = form.querySelector(`input[name="${fieldName}"]`);
+        return input && input.checked ? 'Sim' : 'Não';
       }
 
       if (field.type === 'radio') {
-        data[field.label] = formData.get(field.id) || '';
-        return;
+        return formData.get(fieldName) || '';
       }
 
-      data[field.label] = formData.get(field.id) || '';
-    });
+      return formData.get(fieldName) || '';
+    };
+
+    if (allowMultipleParticipants) {
+      // MODO GRUPO: Coletar dados separadamente
+      const groupSize = parseInt(formData.get('_group_size'), 10) || 1;
+      const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      data._group_size = groupSize;
+      data._group_id = groupId;
+
+      const { groupFields, participantFields } = categorizeFields(config.fields);
+
+      // Coletar dados do grupo
+      const groupData = {};
+      groupFields.forEach(field => {
+        if (field.type === 'sessions') {
+          // Sessions ficam no nível raiz, não em group_data
+          const selected = form.querySelector(`input[name="session-${field.id}"]:checked`);
+          if (selected) {
+            const sessionId = selected.value;
+            const session = (field.sessions || []).find(item => item.id === sessionId);
+            if (session) {
+              const display = buildSessionDisplay(session);
+              const storageKey = `_session_${field.id}`;
+              data[field.label] = display || sessionId;
+              data[storageKey] = sessionId;
+              sessionSelections.push({
+                fieldId: field.id,
+                storageKey,
+                sessionId,
+                capacity: session.capacity,
+                fieldLabel: field.label,
+                sessionTitle: session.title,
+                sessionDisplay: display
+              });
+            }
+          }
+        } else {
+          groupData[field.label] = collectFieldValue(field, 'group');
+        }
+      });
+
+      data.group_data = groupData;
+
+      // Coletar dados dos participantes
+      const participants = [];
+      for (let i = 0; i < groupSize; i++) {
+        const participant = {};
+        participantFields.forEach(field => {
+          participant[field.label] = collectFieldValue(field, `participant_${i}`);
+        });
+        participants.push(participant);
+      }
+
+      data.participants = participants;
+    } else {
+      // MODO INDIVIDUAL: Lógica original
+      config.fields.forEach((field) => {
+        if (field.type === 'checkbox-group') {
+          const values = formData.getAll(`${field.id}[]`);
+          data[field.label] = values;
+          return;
+        }
+
+        if (field.type === 'checkbox') {
+          const input = form.querySelector(`input[name="${field.id}"]`);
+          data[field.label] = input && input.checked ? 'Sim' : 'Não';
+          return;
+        }
+
+        if (field.type === 'sessions') {
+          const selected = form.querySelector(`input[name="session-${field.id}"]:checked`);
+          if (selected) {
+            const sessionId = selected.value;
+            const session = (field.sessions || []).find(item => item.id === sessionId);
+            if (session) {
+              const display = buildSessionDisplay(session);
+              const storageKey = `_session_${field.id}`;
+              data[field.label] = display || sessionId;
+              data[storageKey] = sessionId;
+              sessionSelections.push({
+                fieldId: field.id,
+                storageKey,
+                sessionId,
+                capacity: session.capacity,
+                fieldLabel: field.label,
+                sessionTitle: session.title,
+                sessionDisplay: display
+              });
+            }
+          } else {
+            data[field.label] = '';
+          }
+          return;
+        }
+
+        if (field.type === 'radio') {
+          data[field.label] = formData.get(field.id) || '';
+          return;
+        }
+
+        data[field.label] = formData.get(field.id) || '';
+      });
+    }
 
     data['_página'] = page.label;
     data['_data_envio'] = new Date().toLocaleString('pt-BR');
     data['Autorização de uso de imagem'] = 'Sim';
     data['_autorizacao_imagem'] = 'Sim';
 
-    const result = await saveInscriptionSupabase(page.slug, data, {
-      sessionSelections,
-      maxParticipants: Number(config.max_participants) || 0
-    });
-
-    if (result && result.id) {
-      window.location.href = `/confirmacao?id=${result.id}&page=${page.slug}`;
+    let result;
+    
+    if (allowMultipleParticipants && data._group_size > 1) {
+      // MODO GRUPO: Usar saveMultipleInscriptions
+      // Ler do checkbox se o responsável participa
+      const responsibleParticipatesCheckbox = form.querySelector('#responsible-participates');
+      const responsibleParticipates = responsibleParticipatesCheckbox ? responsibleParticipatesCheckbox.checked : true;
+      
+      const responsibleData = {
+        ...data.group_data,
+        '_página': page.label,
+        '_data_envio': new Date().toLocaleString('pt-BR'),
+        'Autorização de uso de imagem': 'Sim',
+        '_autorizacao_imagem': 'Sim'
+      };
+      
+      // Adicionar seleções de sessão ao responsável
+      if (sessionSelections.length > 0) {
+        sessionSelections.forEach(selection => {
+          responsibleData[selection.fieldLabel] = selection.sessionDisplay;
+          responsibleData[selection.storageKey] = selection.sessionId;
+        });
+      }
+      
+      // Preparar dados dos participantes
+      let participantsData;
+      if (responsibleParticipates) {
+        // Responsável participa: ele é o participante 1, outros começam do 2
+        participantsData = data.participants.map((participant, index) => ({
+          ...participant,
+          _participant_number: index + 2 // Responsável é 1, participantes são 2+
+        }));
+      } else {
+        // Responsável NÃO participa: participantes começam do 1
+        participantsData = data.participants.map((participant, index) => ({
+          ...participant,
+          _participant_number: index + 1 // Participantes são 1, 2, 3...
+        }));
+      }
+      
+      result = await saveMultipleInscriptions(
+        page.slug,
+        responsibleData,
+        participantsData,
+        {
+          sessionSelections,
+          maxParticipants: Number(config.max_participants) || 0,
+          responsibleParticipates
+        }
+      );
+      
+      if (result && result.success) {
+        window.location.href = `/confirmacao?group=${result.groupId}&page=${page.slug}`;
+      }
     } else {
+      // MODO INDIVIDUAL: Lógica original
+      result = await saveInscriptionSupabase(page.slug, data, {
+        sessionSelections,
+        maxParticipants: Number(config.max_participants) || 0
+      });
+      
+      if (result && result.id) {
+        window.location.href = `/confirmacao?id=${result.id}&page=${page.slug}`;
+      }
+    }
+    
+    // Fallback para ambos os modos
+    if (!result || (!result.id && !result.success)) {
       form.style.display = 'none';
       document.getElementById('form-success').style.display = 'block';
     }
