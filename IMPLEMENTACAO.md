@@ -6,6 +6,176 @@ Todos os componentes principais foram implementados e testados com sucesso.
 
 ---
 
+## 🚀 Instalação e Setup
+
+### Pré-requisitos
+
+- **Node.js** versão 14 ou superior
+- **npm** ou **yarn**
+- **Git** (para controle de versão)
+- Navegador moderno (Chrome, Firefox, Safari, Edge)
+
+### Instalação Rápida
+
+```bash
+# 1. Clonar ou baixar o projeto
+cd ~/Desktop/projeto-site-customizavel
+
+# 2. Instalar dependências
+npm install
+
+# 3. Iniciar servidor
+npm start
+
+# 4. Acessar
+# Admin: http://localhost:3000/admin.html
+# Site: http://localhost:3000/
+```
+
+### Configuração Inicial
+
+#### 1. Configurar Supabase (Obrigatório para Produção)
+
+O projeto requer Supabase para persistência de dados.
+
+**Passos rápidos**:
+1. Crie conta em https://supabase.com
+2. Crie novo projeto
+3. Execute SQL em `SETUP_TABELAS.sql`
+4. Configure credenciais em `config.js`
+
+**Documentação completa**: Veja `CONFIGURACAO.md`
+
+#### 2. Configurar Variáveis de Ambiente
+
+**Desenvolvimento Local** (`config.js`):
+```javascript
+window.SUPABASE_URL = 'https://seu-projeto.supabase.co';
+window.SUPABASE_ANON_KEY = 'sua-chave-aqui';
+```
+
+**Produção (Vercel)**:
+- Dashboard → Settings → Environment Variables
+- Adicionar: `SUPABASE_URL` e `SUPABASE_ANON_KEY`
+
+#### 3. Scripts Disponíveis
+
+```bash
+# Desenvolvimento (com auto-reload)
+npm run dev
+
+# Produção
+npm start
+
+# Parar servidor
+./parar-servidor.sh
+
+# Reiniciar servidor
+./parar-servidor.sh && npm start
+```
+
+### Estrutura de Arquivos
+
+```
+projeto-site-customizavel/
+├── index.html              # Página principal
+├── admin.html              # Painel administrativo
+├── confirmacao.html        # Página de confirmação
+├── assets/
+│   ├── css/
+│   │   └── styles.css     # Estilos + CSS Variables
+│   └── js/
+│       ├── admin.js       # Lógica do admin
+│       ├── app.js         # Renderização da home
+│       ├── page.js        # Páginas internas
+│       ├── confirmacao.js # Página de confirmação
+│       └── supabase.js    # Conexão com Supabase
+├── p/
+│   └── index.html         # Template páginas internas
+├── api/
+│   ├── config.js          # Configurações da API
+│   └── index.js           # Endpoints serverless
+├── uploads/               # Imagens (criado automaticamente)
+├── server.js              # Servidor Node.js (dev local)
+├── dev-server.js          # Servidor de desenvolvimento
+├── package.json           # Dependências
+├── vercel.json            # Configuração Vercel
+├── config.example.js      # Exemplo de configuração
+└── *.md                   # Documentação
+```
+
+### Inicialização Passo a Passo
+
+#### Primeira Vez
+
+1. **Instalar dependências**:
+```bash
+npm install
+```
+
+2. **Configurar Supabase** (veja `CONFIGURACAO.md`):
+   - Criar projeto
+   - Executar SQL
+   - Configurar credenciais
+
+3. **Iniciar servidor**:
+```bash
+npm start
+```
+
+4. **Acessar admin**:
+```
+http://localhost:3000/admin.html
+Senha: admin123
+```
+
+5. **Criar conteúdo**:
+   - Editar Home
+   - Criar páginas
+   - Fazer upload de imagens
+   - Customizar tema
+
+#### Uso Diário
+
+```bash
+# Sempre que for trabalhar:
+cd ~/Desktop/projeto-site-customizavel
+npm start
+
+# Acessar:
+# http://localhost:3000/admin.html
+```
+
+### Resolução de Problemas na Instalação
+
+**Erro: "Module not found"**
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Erro: "EADDRINUSE :::3000"**
+```bash
+lsof -ti:3000 | xargs kill -9
+npm start
+```
+
+**Erro: "Cannot find config"**
+```bash
+cp config.example.js config.js
+# Editar config.js com suas credenciais
+```
+
+### Próximos Passos
+
+Após instalação:
+1. ✅ Configure o Supabase (`CONFIGURACAO.md`)
+2. ✅ Leia o manual do usuário (`MANUAL_USUARIO.md`)
+3. ✅ Configure imagens (`GUIA_IMAGENS.md`)
+4. ✅ Prepare para deploy (`DEPLOY.md`)
+
+---
+
 ## 📦 Arquivos Criados
 
 ### Estrutura Completa

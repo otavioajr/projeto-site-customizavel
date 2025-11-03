@@ -95,25 +95,25 @@ projeto-leo/
 
 ## 📚 Documentação
 
-### 🚨 Configuração Essencial
+### 🚀 Documentação Essencial (Comece Aqui!)
 
-- **`LEIA-ME-PRIMEIRO.md`** - ⭐ COMECE AQUI! Guia rápido
-- **`CONFIGURAR_SUPABASE.md`** - Passo a passo completo (10 min)
-- **`SOLUCAO_PERSISTENCIA.md`** - Entenda o problema e a solução
+- **`LEIA-ME-PRIMEIRO.md`** - ⭐ Guia rápido de início
+- **`CONFIGURACAO.md`** - Todas as configurações (Supabase, Vercel, Túneis)
+- **`MANUAL_USUARIO.md`** - Manual completo para usuários finais
+- **`IMPLEMENTACAO.md`** - Instalação, setup e arquitetura técnica
+- **`DEPLOY.md`** - Guia completo de deploy
 
-### 📖 Guias de Uso
+### 📖 Guias Específicos
 
-- **`COMO_USAR_IMAGENS.md`** - Guia rápido de imagens
-- **`GUIA_RAPIDO_IMAGENS.md`** - Tutorial para leigos
-- **`MANUAL_USUARIO.md`** - Manual completo do usuário
+- **`GUIA_IMAGENS.md`** - Sistema completo de gerenciamento de imagens
+- **`INSCRICAO_MULTIPLA.md`** - Documentação de inscrições em grupo
+- **`TROUBLESHOOTING.md`** - Soluções para problemas comuns
+- **`COMANDOS_UTEIS.md`** - Referência rápida de comandos
+- **`RESUMO_EXECUTIVO.md`** - Overview executivo do projeto
 
-### 🔧 Documentação Técnica
+### 📑 Índice Completo
 
-- **`INSTALACAO_SERVIDOR.md`** - Setup do servidor
-- **`RESUMO_FINAL_IMAGENS.md`** - Detalhes da implementação
-- **`IMPLEMENTACAO.md`** - Arquitetura do sistema
-- **`MELHORIAS_ADMIN.md`** - Changelog das melhorias
-- **`SUPABASE_SETUP.md`** - Documentação avançada do Supabase
+- **`INDICE_DOCUMENTACAO.md`** - Navegação completa da documentação
 
 ## 🎯 Como Usar o Admin
 
