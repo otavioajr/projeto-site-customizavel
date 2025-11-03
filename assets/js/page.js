@@ -379,22 +379,8 @@ async function renderForm(container, page) {
         inscriptions = fetchedInscriptions;
       }
     } catch (error) {
-      console.warn('Não foi possível carregar inscrições do Supabase:', error);
-    }
-
-    if (!Array.isArray(inscriptions) || inscriptions.length === 0) {
-      try {
-        const fallbackKey = `inscriptions_${page.slug}`;
-        const fallbackRaw = localStorage.getItem(fallbackKey);
-        if (fallbackRaw) {
-          const fallbackParsed = JSON.parse(fallbackRaw);
-          if (Array.isArray(fallbackParsed)) {
-            inscriptions = fallbackParsed;
-          }
-        }
-      } catch (fallbackError) {
-        console.warn('Não foi possível carregar inscrições do fallback local:', fallbackError);
-      }
+      console.error('Erro ao carregar inscrições:', error);
+      inscriptions = [];
     }
   }
 

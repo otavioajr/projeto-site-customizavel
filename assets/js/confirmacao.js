@@ -97,37 +97,11 @@ async function fetchInscription(pageSlug, inscriptionId) {
       const match = inscriptions.find(item => String(item.id) === String(inscriptionId));
       if (match) return match;
     }
+    return null;
   } catch (error) {
-    console.error('Erro ao carregar inscrição do Supabase:', error);
+    console.error('Erro ao carregar inscrição:', error);
+    return null;
   }
-
-  try {
-    const fallbackKey = `inscriptions_${pageSlug}`;
-    const raw = localStorage.getItem(fallbackKey);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const match = parsed.find(item => String(item.id) === String(inscriptionId));
-        if (match) return match;
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao carregar inscrição do localStorage:', error);
-  }
-
-  try {
-    const legacyRaw = localStorage.getItem('inscriptions');
-    if (legacyRaw) {
-      const parsed = JSON.parse(legacyRaw);
-      if (parsed && typeof parsed === 'object' && Array.isArray(parsed[pageSlug])) {
-        return parsed[pageSlug].find(item => String(item.id) === String(inscriptionId));
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao carregar inscrição no formato legado:', error);
-  }
-
-  return null;
 }
 
 async function fetchPage(pageSlug) {

@@ -172,48 +172,6 @@ function parseSequenceValue(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function computeNextSequenceLocal(pageSlug) {
-  const entries = [];
-
-  try {
-    const key = `inscriptions_${pageSlug}`;
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        entries.push(...parsed);
-      }
-    }
-  } catch (error) {
-    console.warn('Erro ao ler inscrições locais (por slug):', error);
-  }
-
-  try {
-    const legacyRaw = localStorage.getItem('inscriptions');
-    if (legacyRaw) {
-      const parsed = JSON.parse(legacyRaw);
-      if (parsed && typeof parsed === 'object' && Array.isArray(parsed[pageSlug])) {
-        entries.push(...parsed[pageSlug]);
-      }
-    }
-  } catch (error) {
-    console.warn('Erro ao ler inscrições locais (formato legado):', error);
-  }
-
-  const sequences = entries
-    .map(item => parseSequenceValue(
-      item?.form_data?._sequence ||
-      item?.data?._sequence ||
-      item?.form_data?._numero_inscricao ||
-      item?.data?._numero_inscricao
-    ))
-    .filter(value => value !== null);
-
-  const totalEntries = entries.length;
-  const maxSequence = sequences.length > 0 ? Math.max(...sequences) : totalEntries;
-  return maxSequence + 1;
-}
-
 async function computeNextSequenceSupabase(pageSlug) {
   let nextSequence = 1;
 
@@ -324,61 +282,7 @@ export async function saveInscription(pageSlug, formData, options = {}) {
     return data;
   } catch (error) {
     console.error('Erro ao salvar inscrição no Supabase:', error);
-
-    if (error.message && error.message.startsWith('SESSION_FULL:')) {
-      throw error;
-    }
-    if (error.message && error.message.startsWith('LIMIT_REACHED:')) {
-      throw error;
-    }
-
-    const key = `inscriptions_${pageSlug}`;
-    const inscriptions = JSON.parse(localStorage.getItem(key) || '[]');
-
-    const localSequence = computeNextSequenceLocal(pageSlug);
-    nextSequence = Math.max(nextSequence, localSequence);
-
-    if (maxParticipants > 0 && nextSequence > maxParticipants) {
-      throw new Error(`LIMIT_REACHED:As vagas esgotaram! Esta atividade tinha limite de ${maxParticipants} ${maxParticipants === 1 ? 'vaga' : 'vagas'}.`);
-    }
-
-    if (Array.isArray(sessionSelections) && sessionSelections.length > 0) {
-      for (const selection of sessionSelections) {
-        const capacity = parseInt(selection?.capacity, 10);
-        if (!selection?.storageKey || !selection?.sessionId || !Number.isFinite(capacity) || capacity <= 0) {
-          continue;
-        }
-
-        // Somar _group_size para contagem correta
-        const totalParticipants = inscriptions.reduce((sum, inscription) => {
-          const formDataLocal = inscription?.form_data || inscription?.data || {};
-          if (formDataLocal?.[selection.storageKey] === selection.sessionId) {
-            const groupSize = formDataLocal?._group_size || 1;
-            return sum + parseInt(groupSize, 10);
-          }
-          return sum;
-        }, 0);
-
-        if (totalParticipants >= capacity) {
-          const sessionName = selection.sessionDisplay || selection.sessionTitle || 'A bateria selecionada';
-          throw new Error(`SESSION_FULL:${sessionName} já atingiu o limite de ${capacity} ${capacity === 1 ? 'vaga' : 'vagas'}.`);
-        }
-      }
-    }
-
-    const newInscription = {
-      id: 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      page_slug: pageSlug,
-      form_data: {
-        ...formData,
-        _sequence: nextSequence
-      },
-      status: 'pending',
-      created_at: new Date().toISOString()
-    };
-    inscriptions.push(newInscription);
-    localStorage.setItem(key, JSON.stringify(inscriptions));
-    return newInscription;
+    throw error;
   }
 }
 
@@ -394,9 +298,7 @@ export async function getInscriptions(pageSlug) {
     return data || [];
   } catch (error) {
     console.error('Erro ao carregar inscrições do Supabase:', error);
-    const key = `inscriptions_${pageSlug}`;
-    const local = localStorage.getItem(key);
-    return local ? JSON.parse(local) : [];
+    throw error;
   }
 }
 
@@ -493,7 +395,7 @@ let isSupabaseConnected = false;
 checkSupabaseConnection().then(connected => {
   isSupabaseConnected = connected;
   if (!connected) {
-    console.warn('⚠️ Supabase não configurado. Usando localStorage como fallback.');
+    console.warn('⚠️ Supabase não configurado. Funcionalidades de inscrição podem não funcionar corretamente.');
   } else {
     console.log('✅ Supabase conectado com sucesso!');
   }
@@ -826,32 +728,7 @@ export async function saveMultipleInscriptions(pageSlug, responsibleData, partic
     
   } catch (error) {
     console.error('Erro ao salvar inscrições múltiplas:', error);
-    
-    // Propagar erros de validação
-    if (error.message && (error.message.startsWith('SESSION_FULL:') || error.message.startsWith('LIMIT_REACHED:'))) {
-      throw error;
-    }
-    
-    // Fallback para localStorage
-    console.warn('Tentando salvar no localStorage como fallback...');
-    const key = `inscriptions_${pageSlug}`;
-    const existingInscriptions = JSON.parse(localStorage.getItem(key) || '[]');
-    
-    const localInscriptions = inscriptions.map(ins => ({
-      ...ins,
-      id: 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
-    }));
-    
-    existingInscriptions.push(...localInscriptions);
-    localStorage.setItem(key, JSON.stringify(existingInscriptions));
-    
-    return {
-      success: true,
-      groupId: groupId,
-      totalParticipants: totalParticipants,
-      inscriptions: localInscriptions,
-      savedLocally: true
-    };
+    throw error;
   }
 }
 
@@ -1053,27 +930,6 @@ export async function checkAvailableSlots(pageSlug, requestedSlots, maxParticipa
     };
   } catch (error) {
     console.error('Erro ao verificar vagas:', error);
-    
-    // Fallback: contar manualmente
-    try {
-      const inscriptions = await getInscriptions(pageSlug);
-      const currentCount = inscriptions.length;
-      const remaining = maxParticipants - currentCount;
-      
-      return {
-        available: remaining >= requestedSlots,
-        remaining_slots: remaining,
-        message: remaining >= requestedSlots 
-          ? `✅ ${remaining} vagas disponíveis`
-          : `❌ Apenas ${remaining} vagas disponíveis. Você solicitou ${requestedSlots}.`
-      };
-    } catch (fallbackError) {
-      console.error('Erro no fallback de verificação:', fallbackError);
-      return {
-        available: false,
-        remaining_slots: 0,
-        message: 'Erro ao verificar disponibilidade'
-      };
-    }
+    throw error;
   }
 }

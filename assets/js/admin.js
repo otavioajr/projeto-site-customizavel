@@ -1845,26 +1845,18 @@ async function loadInscriptions() {
           }));
         }
       } catch (remoteError) {
-        console.error(`Erro ao carregar inscrições do Supabase para ${pageSlug}:`, remoteError);
-      }
-
-      if (inscriptionsForPage.length === 0) {
-        const localFallback = loadInscriptionsFromLocalStorage(pageSlug);
-        if (Array.isArray(localFallback) && localFallback.length > 0) {
-          inscriptionsForPage = localFallback;
-        }
+        console.error(`Erro ao carregar inscrições para ${pageSlug}:`, remoteError);
+        inscriptionsForPage = [];
       }
 
       inscriptionsByPage[pageSlug] = inscriptionsForPage;
-      persistInscriptionsForPage(pageSlug, inscriptionsForPage);
     }
 
     state.inscriptions = inscriptionsByPage;
     return state.inscriptions;
   } catch (error) {
     console.error('Erro ao carregar inscrições:', error);
-    const fallback = loadAllInscriptionsFromLegacyStorage();
-    state.inscriptions = fallback;
+    state.inscriptions = {};
     return state.inscriptions;
   }
 }
@@ -1874,77 +1866,6 @@ async function loadInscriptionsEditor() {
   await populatePageFilter();
   updateInscriptionsStats();
   renderInscriptionsTable();
-}
-
-function loadInscriptionsFromLocalStorage(pageSlug) {
-  const inscriptions = [];
-
-  try {
-    const key = `inscriptions_${pageSlug}`;
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        parsed.forEach(item => {
-          inscriptions.push({
-            id: item.id,
-            data: item.form_data || item.data || {},
-            timestamp: item.created_at || item.timestamp || new Date().toISOString(),
-            status: item.status || 'pending',
-            pageSlug
-          });
-        });
-      }
-    }
-  } catch (error) {
-    console.warn(`Erro ao carregar inscrições locais para ${pageSlug}:`, error);
-  }
-
-  return inscriptions;
-}
-
-function loadAllInscriptionsFromLegacyStorage() {
-  const result = {};
-
-  try {
-    const raw = localStorage.getItem('inscriptions');
-    if (!raw) return result;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return result;
-
-    Object.keys(parsed).forEach(pageSlug => {
-      if (Array.isArray(parsed[pageSlug])) {
-        result[pageSlug] = parsed[pageSlug].map(item => ({
-          id: item.id,
-          data: item.data || item.form_data || {},
-          timestamp: item.timestamp || new Date().toISOString(),
-          status: item.status || 'pending',
-          pageSlug
-        }));
-      }
-    });
-  } catch (error) {
-    console.warn('Erro ao carregar inscrições do localStorage legado:', error);
-  }
-
-  return result;
-}
-
-function persistInscriptionsForPage(pageSlug, inscriptions) {
-  try {
-    localStorage.setItem(`inscriptions_${pageSlug}`, JSON.stringify(inscriptions || []));
-  } catch (error) {
-    console.warn(`Erro ao salvar inscrições locais (${pageSlug}):`, error);
-  }
-
-  try {
-    const legacyRaw = localStorage.getItem('inscriptions');
-    const legacy = legacyRaw ? JSON.parse(legacyRaw) : {};
-    legacy[pageSlug] = inscriptions || [];
-    localStorage.setItem('inscriptions', JSON.stringify(legacy));
-  } catch (error) {
-    console.warn('Erro ao salvar inscrições no armazenamento legado:', error);
-  }
 }
 
 function updateInscriptionsStats() {
