@@ -212,14 +212,27 @@ async function computeNextSequenceSupabase(pageSlug) {
 
 export async function saveInscription(pageSlug, formData, options = {}) {
   const { sessionSelections = [], maxParticipants = 0 } = options || {};
+  
+  console.log('🔵 [saveInscription] INÍCIO');
+  console.log('  pageSlug:', pageSlug);
+  console.log('  maxParticipants:', maxParticipants);
+  console.log('  formData:', formData);
+  console.log('  Supabase URL:', supabaseUrl);
+  console.log('  Supabase Key exists:', !!supabaseAnonKey);
+  
   let nextSequence = await computeNextSequenceSupabase(pageSlug);
+  console.log('  nextSequence:', nextSequence);
 
   if (maxParticipants > 0 && nextSequence > maxParticipants) {
-    throw new Error(`LIMIT_REACHED:As vagas esgotaram! Esta atividade tinha limite de ${maxParticipants} ${maxParticipants === 1 ? 'vaga' : 'vagas'}.`);
+    const errorMsg = `LIMIT_REACHED:As vagas esgotaram! Esta atividade tinha limite de ${maxParticipants} ${maxParticipants === 1 ? 'vaga' : 'vagas'}.`;
+    console.error('❌ [saveInscription] Limite de vagas atingido:', errorMsg);
+    throw new Error(errorMsg);
   }
 
   try {
     if (Array.isArray(sessionSelections) && sessionSelections.length > 0) {
+      console.log('  Verificando disponibilidade de sessões:', sessionSelections.length);
+      
       for (const selection of sessionSelections) {
         const capacity = parseInt(selection?.capacity, 10);
         if (!selection?.storageKey || !selection?.sessionId || !Number.isFinite(capacity) || capacity <= 0) {
@@ -235,7 +248,10 @@ export async function saveInscription(pageSlug, formData, options = {}) {
           .eq('page_slug', pageSlug)
           .eq(column, selection.sessionId);
 
-        if (sessionError) throw sessionError;
+        if (sessionError) {
+          console.error('❌ [saveInscription] Erro ao verificar sessão:', sessionError);
+          throw sessionError;
+        }
 
         // Somar _group_size (se não existir, considerar 1 para backward compatibility)
         let totalParticipants = 0;
@@ -246,9 +262,13 @@ export async function saveInscription(pageSlug, formData, options = {}) {
           }, 0);
         }
 
+        console.log(`  Sessão ${selection.sessionId}: ${totalParticipants}/${capacity} participantes`);
+
         if (totalParticipants >= capacity) {
           const sessionName = selection.sessionDisplay || selection.sessionTitle || 'A bateria selecionada';
-          throw new Error(`SESSION_FULL:${sessionName} já atingiu o limite de ${capacity} ${capacity === 1 ? 'vaga' : 'vagas'}.`);
+          const errorMsg = `SESSION_FULL:${sessionName} já atingiu o limite de ${capacity} ${capacity === 1 ? 'vaga' : 'vagas'}.`;
+          console.error('❌ [saveInscription] Sessão lotada:', errorMsg);
+          throw new Error(errorMsg);
         }
       }
     }
@@ -262,26 +282,53 @@ export async function saveInscription(pageSlug, formData, options = {}) {
     // Gerar UUID para o grupo (mesmo sendo individual, mantém compatibilidade)
     const groupId = generateUUID();
 
+    const inscriptionData = {
+      page_slug: pageSlug,
+      group_id: groupId,
+      is_responsible: true,
+      responsible_id: null,
+      participant_number: 1,
+      total_participants: 1,
+      form_data: formDataWithSequence,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    
+    console.log('  Enviando inscrição para Supabase:', inscriptionData);
+
     const { data, error } = await supabase
       .from('inscriptions')
-      .insert([{
-        page_slug: pageSlug,
-        group_id: groupId,
-        is_responsible: true,
-        responsible_id: null,
-        participant_number: 1,
-        total_participants: 1,
-        form_data: formDataWithSequence,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      }])
+      .insert([inscriptionData])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [saveInscription] Erro do Supabase ao inserir:', error);
+      console.error('  Código do erro:', error.code);
+      console.error('  Mensagem:', error.message);
+      console.error('  Detalhes:', error.details);
+      throw error;
+    }
+    
+    if (!data) {
+      console.error('❌ [saveInscription] CRÍTICO: Supabase retornou sem erro mas sem dados!');
+      throw new Error('Falha ao salvar inscrição: Nenhum dado retornado do Supabase.');
+    }
+    
+    if (!data.id) {
+      console.error('❌ [saveInscription] CRÍTICO: Dados retornados sem ID:', data);
+      throw new Error('Falha ao salvar inscrição: ID não retornado.');
+    }
+
+    console.log('✅ [saveInscription] Inscrição salva com sucesso!');
+    console.log('  ID:', data.id);
+    console.log('  Group ID:', data.group_id);
     return data;
   } catch (error) {
-    console.error('Erro ao salvar inscrição no Supabase:', error);
+    console.error('❌ [saveInscription] ERRO CAPTURADO:', error);
+    console.error('  Tipo:', error.constructor.name);
+    console.error('  Mensagem:', error.message);
+    console.error('  Stack:', error.stack);
     throw error;
   }
 }
@@ -577,6 +624,17 @@ export async function saveMultipleInscriptions(pageSlug, responsibleData, partic
     ? 1 + participantsData.length  // Responsável participa: 1 + outros
     : participantsData.length;      // Responsável NÃO participa: apenas outros
   
+  console.log('🔵 [saveMultipleInscriptions] INÍCIO');
+  console.log('  pageSlug:', pageSlug);
+  console.log('  groupId:', groupId);
+  console.log('  totalParticipants:', totalParticipants);
+  console.log('  responsibleParticipates:', responsibleParticipates);
+  console.log('  maxParticipants:', maxParticipants);
+  console.log('  responsibleData:', responsibleData);
+  console.log('  participantsData length:', participantsData.length);
+  console.log('  Supabase URL:', supabaseUrl);
+  console.log('  Supabase Key exists:', !!supabaseAnonKey);
+  
   try {
     // Validar vagas disponíveis
     if (maxParticipants > 0) {
@@ -695,12 +753,26 @@ export async function saveMultipleInscriptions(pageSlug, responsibleData, partic
     }
     
     // Inserir todas as inscrições
+    console.log('  Enviando', inscriptions.length, 'inscrições para Supabase...');
     const { data, error } = await supabase
       .from('inscriptions')
       .insert(inscriptions)
       .select();
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [saveMultipleInscriptions] Erro do Supabase ao inserir:', error);
+      console.error('  Código do erro:', error.code);
+      console.error('  Mensagem:', error.message);
+      console.error('  Detalhes:', error.details);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      console.error('❌ [saveMultipleInscriptions] CRÍTICO: Supabase retornou sem erro mas sem dados!');
+      throw new Error('Falha ao salvar inscrições: Nenhum dado retornado do Supabase.');
+    }
+    
+    console.log('✅ [saveMultipleInscriptions] Inscrições inseridas:', data.length);
     
     // Atualizar responsible_id dos participantes (apenas se responsável participa)
     if (responsibleParticipates && data && data.length > 0) {
@@ -719,15 +791,21 @@ export async function saveMultipleInscriptions(pageSlug, responsibleData, partic
       }
     }
     
-    return {
+    const result = {
       success: true,
       groupId: groupId,
       totalParticipants: totalParticipants,
       inscriptions: data
     };
     
+    console.log('✅ [saveMultipleInscriptions] SUCESSO! Retornando:', result);
+    return result;
+    
   } catch (error) {
-    console.error('Erro ao salvar inscrições múltiplas:', error);
+    console.error('❌ [saveMultipleInscriptions] ERRO CAPTURADO:', error);
+    console.error('  Tipo:', error.constructor.name);
+    console.error('  Mensagem:', error.message);
+    console.error('  Stack:', error.stack);
     throw error;
   }
 }

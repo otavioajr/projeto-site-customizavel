@@ -120,11 +120,51 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <p>&copy; 2025 Aventuras. Todos os direitos reservados.</p>
+      <p>&copy; 2025 Aventuras. Todos os direitos reservados. 
+        <a href="#" id="clear-cache-link" style="margin-left: 10px; font-size: 0.8em; opacity: 0.7;">Limpar Cache</a>
+      </p>
     </div>
   </footer>
 
   <script>
+    // Função global para limpar cache e cookies
+    window.clearSiteCache = function() {
+      if (confirm('Isso vai limpar todos os dados salvos localmente e recarregar a página. Deseja continuar?')) {
+        try {
+          // Limpar localStorage
+          localStorage.clear();
+          console.log('✅ localStorage limpo');
+          
+          // Limpar sessionStorage
+          sessionStorage.clear();
+          console.log('✅ sessionStorage limpo');
+          
+          // Limpar cookies
+          document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+          });
+          console.log('✅ Cookies limpos');
+          
+          // Recarregar a página
+          window.location.reload(true);
+        } catch (error) {
+          console.error('Erro ao limpar cache:', error);
+          alert('Erro ao limpar cache. Tente recarregar a página manualmente.');
+        }
+      }
+    };
+
+    // Adicionar evento ao link de limpar cache quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+      const clearCacheLink = document.getElementById('clear-cache-link');
+      if (clearCacheLink) {
+        clearCacheLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.clearSiteCache();
+        });
+      }
+    });
+
     // Carregar config de acordo com o ambiente e aguardar antes de carregar o app.js
     (async () => {
       const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';

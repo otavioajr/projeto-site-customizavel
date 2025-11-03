@@ -880,7 +880,10 @@
     <div class="admin-editor">
       <div class="admin-header">
         <h1>🎨 Admin</h1>
-        <a href="/" target="_blank">Ver Site →</a>
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <button id="clear-cache-btn" class="btn-secondary" style="padding: 0.5rem 1rem; cursor: pointer;">🗑️ Limpar Cache</button>
+          <a href="/" target="_blank">Ver Site →</a>
+        </div>
       </div>
 
       <!-- Alert -->
@@ -1342,6 +1345,46 @@
 
   <input type="file" id="import-file-input" accept=".json" style="display: none;">
   <script>
+    // Função global para limpar cache e cookies
+    window.clearSiteCache = function() {
+      if (confirm('⚠️ ATENÇÃO: Isso vai limpar TODOS os dados salvos localmente (incluindo páginas, configurações e inscrições em cache) e recarregar a página.\n\nOs dados no Supabase NÃO serão afetados.\n\nDeseja continuar?')) {
+        try {
+          // Limpar localStorage
+          localStorage.clear();
+          console.log('✅ localStorage limpo');
+          
+          // Limpar sessionStorage
+          sessionStorage.clear();
+          console.log('✅ sessionStorage limpo');
+          
+          // Limpar cookies
+          document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+          });
+          console.log('✅ Cookies limpos');
+          
+          alert('✅ Cache limpo com sucesso! A página será recarregada.');
+          
+          // Recarregar a página
+          window.location.reload(true);
+        } catch (error) {
+          console.error('Erro ao limpar cache:', error);
+          alert('❌ Erro ao limpar cache. Tente recarregar a página manualmente (Ctrl+Shift+R ou Cmd+Shift+R).');
+        }
+      }
+    };
+
+    // Adicionar evento ao botão de limpar cache quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+      const clearCacheBtn = document.getElementById('clear-cache-btn');
+      if (clearCacheBtn) {
+        clearCacheBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.clearSiteCache();
+        });
+      }
+    });
+
     // Carregar config de acordo com o ambiente e aguardar antes de carregar o admin.js
     (async () => {
       const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';

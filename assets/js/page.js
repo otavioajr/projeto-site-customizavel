@@ -644,6 +644,19 @@ async function handleFormSubmit(form, config, page) {
 
   try {
     submitBtn.disabled = true;
+    submitBtn.textContent = 'Validando conexão...';
+    
+    // VALIDAÇÃO DE CONEXÃO COM SUPABASE
+    console.log('🔍 [handleFormSubmit] Verificando conexão com Supabase...');
+    const { checkSupabaseConnection } = await import('./supabase.js');
+    const isConnected = await checkSupabaseConnection();
+    
+    if (!isConnected) {
+      console.error('❌ [handleFormSubmit] Sem conexão com Supabase!');
+      throw new Error('ERRO CRÍTICO: Não foi possível conectar ao servidor. A inscrição NÃO pode ser enviada.\n\nVerifique sua conexão com a internet e tente novamente.');
+    }
+    
+    console.log('✅ [handleFormSubmit] Conexão com Supabase confirmada!');
     submitBtn.textContent = 'Enviando...';
 
     const formData = new FormData(form);
@@ -779,6 +792,11 @@ async function handleFormSubmit(form, config, page) {
     data['Autorização de uso de imagem'] = 'Sim';
     data['_autorizacao_imagem'] = 'Sim';
 
+    console.log('🔵 [handleFormSubmit] Preparando envio da inscrição');
+    console.log('  Modo:', allowMultipleParticipants ? 'GRUPO' : 'INDIVIDUAL');
+    console.log('  Page slug:', page.slug);
+    console.log('  Page label:', page.label);
+
     let result;
     
     if (allowMultipleParticipants && data._group_size > 1) {
@@ -830,24 +848,30 @@ async function handleFormSubmit(form, config, page) {
         }
       );
       
-      console.log('=== DEBUG INSCRIÇÃO MÚLTIPLA ===');
-      console.log('result:', JSON.stringify(result, null, 2));
-      console.log('page.slug:', page.slug);
-      console.log('result.success:', result?.success);
-      console.log('result.groupId:', result?.groupId);
+      console.log('✅ [handleFormSubmit] Inscrição múltipla retornou:', result);
       
-      if (result && result.success && result.groupId && page.slug) {
-        const redirectUrl = `/confirmacao.html?group=${result.groupId}&page=${page.slug}`;
-        console.log('✅ Redirecionando para:', redirectUrl);
-        window.location.href = redirectUrl;
-        return; // Garantir que não execute código adicional
-      } else {
-        console.error('❌ Erro: Parâmetros insuficientes para redirecionar');
-        console.error('  hasResult:', !!result);
-        console.error('  result.success:', result?.success);
-        console.error('  result.groupId:', result?.groupId);
-        console.error('  page.slug:', page.slug);
+      // VALIDAÇÃO CRÍTICA: Nunca prosseguir sem dados válidos
+      if (!result) {
+        throw new Error('ERRO CRÍTICO: Nenhum resultado retornado do servidor. A inscrição NÃO foi salva.');
       }
+      
+      if (!result.success) {
+        throw new Error('ERRO CRÍTICO: Servidor indicou falha. A inscrição NÃO foi salva.');
+      }
+      
+      if (!result.groupId) {
+        throw new Error('ERRO CRÍTICO: ID do grupo não retornado. A inscrição pode não ter sido salva corretamente.');
+      }
+      
+      if (!page.slug) {
+        throw new Error('ERRO CRÍTICO: Página sem slug. Não é possível confirmar a inscrição.');
+      }
+      
+      // Tudo OK, redirecionar
+      const redirectUrl = `/confirmacao.html?group=${result.groupId}&page=${page.slug}`;
+      console.log('✅ [handleFormSubmit] Redirecionando para:', redirectUrl);
+      window.location.href = redirectUrl;
+      return;
     } else {
       // MODO INDIVIDUAL: Lógica original
       result = await saveInscriptionSupabase(page.slug, data, {
@@ -855,47 +879,72 @@ async function handleFormSubmit(form, config, page) {
         maxParticipants: Number(config.max_participants) || 0
       });
       
-      console.log('=== DEBUG INSCRIÇÃO INDIVIDUAL ===');
-      console.log('result:', JSON.stringify(result, null, 2));
-      console.log('page.slug:', page.slug);
-      console.log('result.id:', result?.id);
+      console.log('✅ [handleFormSubmit] Inscrição individual retornou:', result);
       
-      if (result && result.id && page.slug) {
-        const redirectUrl = `/confirmacao.html?id=${result.id}&page=${page.slug}`;
-        console.log('✅ Redirecionando para:', redirectUrl);
-        window.location.href = redirectUrl;
-        return; // Garantir que não execute código adicional
-      } else {
-        console.error('❌ Erro: Parâmetros insuficientes para redirecionar');
-        console.error('  hasResult:', !!result);
-        console.error('  result.id:', result?.id);
-        console.error('  page.slug:', page.slug);
+      // VALIDAÇÃO CRÍTICA: Nunca prosseguir sem dados válidos
+      if (!result) {
+        throw new Error('ERRO CRÍTICO: Nenhum resultado retornado do servidor. A inscrição NÃO foi salva.');
       }
+      
+      if (!result.id) {
+        throw new Error('ERRO CRÍTICO: ID da inscrição não retornado. A inscrição pode não ter sido salva corretamente.');
+      }
+      
+      if (!page.slug) {
+        throw new Error('ERRO CRÍTICO: Página sem slug. Não é possível confirmar a inscrição.');
+      }
+      
+      // Tudo OK, redirecionar
+      const redirectUrl = `/confirmacao.html?id=${result.id}&page=${page.slug}`;
+      console.log('✅ [handleFormSubmit] Redirecionando para:', redirectUrl);
+      window.location.href = redirectUrl;
+      return;
     }
     
-    // Fallback para ambos os modos
-    if (!result || (!result.id && !result.success)) {
-      console.error('Erro: resultado incompleto', result);
-      form.style.display = 'none';
-      document.getElementById('form-success').style.display = 'block';
-    }
+    // ESTE CÓDIGO NÃO DEVE SER ALCANÇADO
+    // Se chegarmos aqui, significa que não entramos em nenhum dos blocos acima
+    console.error('❌ [handleFormSubmit] ERRO: Código alcançou ponto inesperado');
+    throw new Error('ERRO INESPERADO: Falha no fluxo de inscrição. Por favor, tente novamente.');
   } catch (error) {
+    console.error('❌ [handleFormSubmit] ERRO CAPTURADO:', error);
+    console.error('  Tipo:', error.constructor.name);
+    console.error('  Mensagem:', error.message);
+    console.error('  Stack:', error.stack);
+    
     submitBtn.disabled = false;
     submitBtn.textContent = originalBtnText;
 
+    // Tratamento específico por tipo de erro
     if (error.message && error.message.startsWith('LIMIT_REACHED:')) {
       const message = error.message.replace('LIMIT_REACHED:', '');
+      console.warn('⚠️ [handleFormSubmit] Limite de vagas atingido:', message);
       showErrorModal(message);
     } else if (error.message && error.message.startsWith('SESSION_FULL:')) {
       const message = error.message.replace('SESSION_FULL:', '');
+      console.warn('⚠️ [handleFormSubmit] Sessão lotada:', message);
       showErrorModal(message);
       const container = document.getElementById('page-content');
       if (container) {
         await renderForm(container, page);
       }
+    } else if (error.message && error.message.startsWith('ERRO CRÍTICO:')) {
+      // Erros críticos de validação
+      console.error('🚨 [handleFormSubmit] ERRO CRÍTICO detectado!');
+      showErrorModal(error.message + '\n\nPor favor, entre em contato com o suporte se o problema persistir.');
+    } else if (error.code === 'PGRST301' || error.code === '42501') {
+      // Erros de permissão do Supabase (RLS)
+      console.error('🚨 [handleFormSubmit] ERRO DE PERMISSÃO no banco de dados!');
+      console.error('  Código:', error.code);
+      console.error('  Este erro indica que as políticas RLS estão bloqueando a inserção.');
+      showErrorModal('Erro de permissão no servidor. A inscrição NÃO foi salva.\n\nPor favor, entre em contato com o administrador do sistema.');
+    } else if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      // Erros de rede
+      console.error('🌐 [handleFormSubmit] ERRO DE REDE detectado!');
+      showErrorModal('Erro de conexão com o servidor. Verifique sua internet e tente novamente.\n\nA inscrição NÃO foi salva.');
     } else {
-      console.error('Erro ao enviar inscrição:', error);
-      showErrorModal('Erro ao enviar inscrição. Por favor, tente novamente.');
+      // Erro genérico
+      console.error('❓ [handleFormSubmit] Erro não categorizado:', error);
+      showErrorModal('Erro ao enviar inscrição: ' + (error.message || 'Erro desconhecido') + '\n\nA inscrição pode NÃO ter sido salva. Por favor, tente novamente.');
     }
   }
 }

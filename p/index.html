@@ -211,7 +211,10 @@
     <header class="page-header">
       <div class="container">
         <a href="/" class="page-logo" id="site-logo">Aventuras</a>
-        <a href="/" class="page-back">← Voltar à Home</a>
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <a href="#" id="clear-cache-link" style="font-size: 0.8em; opacity: 0.6; cursor: pointer;">Limpar Cache</a>
+          <a href="/" class="page-back">← Voltar à Home</a>
+        </div>
       </div>
     </header>
 
@@ -222,6 +225,44 @@
   </div>
 
   <script>
+    // Função global para limpar cache e cookies
+    window.clearSiteCache = function() {
+      if (confirm('Isso vai limpar todos os dados salvos localmente e recarregar a página. Deseja continuar?')) {
+        try {
+          // Limpar localStorage
+          localStorage.clear();
+          console.log('✅ localStorage limpo');
+          
+          // Limpar sessionStorage
+          sessionStorage.clear();
+          console.log('✅ sessionStorage limpo');
+          
+          // Limpar cookies
+          document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+          });
+          console.log('✅ Cookies limpos');
+          
+          // Recarregar a página
+          window.location.reload(true);
+        } catch (error) {
+          console.error('Erro ao limpar cache:', error);
+          alert('Erro ao limpar cache. Tente recarregar a página manualmente.');
+        }
+      }
+    };
+
+    // Adicionar evento ao link de limpar cache quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+      const clearCacheLink = document.getElementById('clear-cache-link');
+      if (clearCacheLink) {
+        clearCacheLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.clearSiteCache();
+        });
+      }
+    });
+
     // Carregar config de acordo com o ambiente e aguardar antes de carregar o page.js
     (async () => {
       const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';

@@ -490,10 +490,52 @@
 
       <div style="text-align: center;">
         <a href="/" class="back-button">← Voltar à Home</a>
+        <p style="margin-top: 1rem; font-size: 0.8em; opacity: 0.6;">
+          <a href="#" id="clear-cache-link" style="color: inherit;">Limpar Cache</a>
+        </p>
       </div>
     </div>
   </div>
 
+  <script>
+    // Função global para limpar cache e cookies
+    window.clearSiteCache = function() {
+      if (confirm('Isso vai limpar todos os dados salvos localmente e recarregar a página. Deseja continuar?')) {
+        try {
+          // Limpar localStorage
+          localStorage.clear();
+          console.log('✅ localStorage limpo');
+          
+          // Limpar sessionStorage
+          sessionStorage.clear();
+          console.log('✅ sessionStorage limpo');
+          
+          // Limpar cookies
+          document.cookie.split(";").forEach(function(c) { 
+            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+          });
+          console.log('✅ Cookies limpos');
+          
+          // Recarregar a página
+          window.location.href = '/';
+        } catch (error) {
+          console.error('Erro ao limpar cache:', error);
+          alert('Erro ao limpar cache. Tente recarregar a página manualmente.');
+        }
+      }
+    };
+
+    // Adicionar evento ao link de limpar cache quando o DOM estiver pronto
+    document.addEventListener('DOMContentLoaded', function() {
+      const clearCacheLink = document.getElementById('clear-cache-link');
+      if (clearCacheLink) {
+        clearCacheLink.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.clearSiteCache();
+        });
+      }
+    });
+  </script>
   <script>
     (async () => {
       const configSrc = window.location.hostname === 'localhost' ? '/config.js' : '/api/config';
