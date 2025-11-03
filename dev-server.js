@@ -7,4 +7,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor de desenvolvimento rodando em http://localhost:${PORT}`);
   console.log(`📸 Admin disponível em: http://localhost:${PORT}/admin.html`);
   console.log(`📝 Confirmação disponível em: http://localhost:${PORT}/confirmacao.html`);
+}).on('error', (err) => {
+  console.error('❌ Erro ao iniciar servidor:', err.message);
+  process.exit(1);
 });

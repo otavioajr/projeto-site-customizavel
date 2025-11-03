@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon dev-server.js",
+    "fast-dev": "node fast-dev.js",
     "vercel-dev": "vercel dev",
     "build": "echo 'No build needed'",
     "preview": "npx serve -p 3000"

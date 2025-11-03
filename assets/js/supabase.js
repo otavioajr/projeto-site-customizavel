@@ -297,13 +297,22 @@ export async function saveInscription(pageSlug, formData, options = {}) {
 
     const formDataWithSequence = {
       ...formData,
-      _sequence: nextSequence
+      _sequence: nextSequence,
+      _group_size: 1 // Inscrição individual = 1 participante
     };
+
+    // Gerar UUID para o grupo (mesmo sendo individual, mantém compatibilidade)
+    const groupId = generateUUID();
 
     const { data, error } = await supabase
       .from('inscriptions')
       .insert([{
         page_slug: pageSlug,
+        group_id: groupId,
+        is_responsible: true,
+        responsible_id: null,
+        participant_number: 1,
+        total_participants: 1,
         form_data: formDataWithSequence,
         status: 'pending',
         created_at: new Date().toISOString()

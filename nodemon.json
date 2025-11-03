@@ -1,8 +1,8 @@
 {
-  "delay": 800,
+  "delay": 100,
   "watch": ["dev-server.js", "server.js", "api/"],
   "ext": "js,json",
-  "legacyWatch": true,
+  "legacyWatch": false,
   "signal": "SIGTERM",
   "restartable": "rs",
   "env": {
@@ -12,16 +12,23 @@
     "node_modules/**",
     "uploads/**",
     "assets/**",
-    "*.md",
-    "*.txt",
-    "*.sql",
-    "*.sh",
-    "*.example.*",
+    "p/**",
     ".git/**",
+    ".cursor/**",
+    "**/*.md",
+    "**/*.txt",
+    "**/*.sql",
+    "**/*.sh",
+    "**/*.html",
+    "**/*.css",
+    "**/*.example.*",
+    "**/*.lock",
+    "**/*.log",
+    "**/*.pid",
     ".env*",
     "vercel.json",
     "netlify.toml",
-    "README*",
-    "*.lock"
-  ]
+    "package*.json"
+  ],
+  "verbose": false
 }

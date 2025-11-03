@@ -12,11 +12,40 @@ async function initConfirmation() {
   const groupId = urlParams.get('group');
   const pageSlug = urlParams.get('page');
 
-  // Aceita tanto id quanto group
-  if ((!inscriptionId && !groupId) || !pageSlug) {
+  // Log para debug
+  console.log('=== DEBUG CONFIRMAÇÃO ===');
+  console.log('URL completa:', window.location.href);
+  console.log('Search params:', window.location.search);
+  console.log('inscriptionId:', inscriptionId, '| tipo:', typeof inscriptionId);
+  console.log('groupId:', groupId, '| tipo:', typeof groupId);
+  console.log('pageSlug:', pageSlug, '| tipo:', typeof pageSlug);
+
+  // Validar parâmetros (verificar se não são null, undefined ou string "undefined"/"null")
+  const isValidParam = (param) => {
+    return param && param !== 'null' && param !== 'undefined' && param.trim() !== '';
+  };
+
+  const hasValidId = isValidParam(inscriptionId);
+  const hasValidGroup = isValidParam(groupId);
+  const hasValidPage = isValidParam(pageSlug);
+
+  console.log('Validações:');
+  console.log('  hasValidId:', hasValidId);
+  console.log('  hasValidGroup:', hasValidGroup);
+  console.log('  hasValidPage:', hasValidPage);
+
+  // Aceita tanto id quanto group, mas precisa de page
+  if ((!hasValidId && !hasValidGroup) || !hasValidPage) {
+    console.error('❌ ERRO: Parâmetros inválidos!');
+    console.error('Motivo:', 
+      !hasValidId && !hasValidGroup ? 'Falta id ou group válido' : '',
+      !hasValidPage ? 'Falta page válido' : ''
+    );
     renderError('Parâmetros inválidos na URL.', 'Erro');
     return;
   }
+  
+  console.log('✅ Parâmetros válidos! Carregando confirmação...');
 
   try {
     const page = await fetchPage(pageSlug);

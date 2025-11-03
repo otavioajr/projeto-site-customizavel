@@ -844,8 +844,23 @@ async function handleFormSubmit(form, config, page) {
         }
       );
       
-      if (result && result.success) {
-        window.location.href = `/confirmacao?group=${result.groupId}&page=${page.slug}`;
+      console.log('=== DEBUG INSCRIÇÃO MÚLTIPLA ===');
+      console.log('result:', JSON.stringify(result, null, 2));
+      console.log('page.slug:', page.slug);
+      console.log('result.success:', result?.success);
+      console.log('result.groupId:', result?.groupId);
+      
+      if (result && result.success && result.groupId && page.slug) {
+        const redirectUrl = `/confirmacao.html?group=${result.groupId}&page=${page.slug}`;
+        console.log('✅ Redirecionando para:', redirectUrl);
+        window.location.href = redirectUrl;
+        return; // Garantir que não execute código adicional
+      } else {
+        console.error('❌ Erro: Parâmetros insuficientes para redirecionar');
+        console.error('  hasResult:', !!result);
+        console.error('  result.success:', result?.success);
+        console.error('  result.groupId:', result?.groupId);
+        console.error('  page.slug:', page.slug);
       }
     } else {
       // MODO INDIVIDUAL: Lógica original
@@ -854,13 +869,27 @@ async function handleFormSubmit(form, config, page) {
         maxParticipants: Number(config.max_participants) || 0
       });
       
-      if (result && result.id) {
-        window.location.href = `/confirmacao?id=${result.id}&page=${page.slug}`;
+      console.log('=== DEBUG INSCRIÇÃO INDIVIDUAL ===');
+      console.log('result:', JSON.stringify(result, null, 2));
+      console.log('page.slug:', page.slug);
+      console.log('result.id:', result?.id);
+      
+      if (result && result.id && page.slug) {
+        const redirectUrl = `/confirmacao.html?id=${result.id}&page=${page.slug}`;
+        console.log('✅ Redirecionando para:', redirectUrl);
+        window.location.href = redirectUrl;
+        return; // Garantir que não execute código adicional
+      } else {
+        console.error('❌ Erro: Parâmetros insuficientes para redirecionar');
+        console.error('  hasResult:', !!result);
+        console.error('  result.id:', result?.id);
+        console.error('  page.slug:', page.slug);
       }
     }
     
     // Fallback para ambos os modos
     if (!result || (!result.id && !result.success)) {
+      console.error('Erro: resultado incompleto', result);
       form.style.display = 'none';
       document.getElementById('form-success').style.display = 'block';
     }

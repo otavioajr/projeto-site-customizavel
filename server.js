@@ -12,16 +12,17 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Ignorar arquivos desnecessários
-app.use((req, res, next) => {
-  const ext = path.extname(req.path).toLowerCase();
-  if (['.md', '.sql', '.sh', '.txt', '.example'].includes(ext)) {
-    return res.status(404).send('Not Found');
-  }
-  next();
-});
+// Servir arquivos estáticos apenas dos diretórios necessários
+app.use('/assets', express.static(path.join(__dirname, 'assets'), { maxAge: 0 }));
+app.use('/p', express.static(path.join(__dirname, 'p'), { maxAge: 0 }));
 
-app.use(express.static('.')); // Servir arquivos estáticos do projeto
+// Servir arquivos HTML da raiz
+const htmlFiles = ['index.html', 'admin.html', 'confirmacao.html', 'adicionar-exemplo.html', 'exemplo-inscricao-multipla.html', 'test-supabase.html'];
+htmlFiles.forEach(file => {
+  app.get(`/${file}`, (req, res) => {
+    res.sendFile(path.join(__dirname, file));
+  });
+});
 
 // Criar pasta uploads se não existir
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -123,15 +124,24 @@ app.delete('/api/images/:filename', (req, res) => {
 // Servir arquivos da pasta uploads
 app.use('/uploads', express.static(uploadsDir));
 
-// Rota para admin (redireciona /admin para /admin.html)
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin.html'));
+// Rota para servir config.js (para desenvolvimento local)
+app.get('/config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  const config = `
+window.SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
+window.SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+  `.trim();
+  res.status(200).send(config);
 });
 
-// Rota para confirmação (redireciona /confirmacao para /confirmacao.html)
-app.get('/confirmacao', (req, res) => {
-  res.sendFile(path.join(__dirname, 'confirmacao.html'));
+// Rota raiz serve o index
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Atalhos sem .html
+app.get('/admin', (req, res) => res.redirect('/admin.html'));
+app.get('/confirmacao', (req, res) => res.redirect('/confirmacao.html'));
 
 // Exportar app para Vercel (serverless)
 module.exports = app;
