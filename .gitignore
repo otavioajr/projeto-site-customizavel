@@ -3,6 +3,9 @@ node_modules/
 *.log
 .env
 .env.local
+.env.production
+.env.homol
+.env.*
 .vercel
 dist/
 uploads/

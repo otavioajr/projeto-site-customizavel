@@ -1,4 +1,6 @@
 // server.js - Servidor simples para upload de imagens
+require('dotenv').config(); // Carregar variáveis de ambiente
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -7,6 +9,10 @@ const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Exibir ambiente atual
+console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+console.log(`📊 Supabase URL: ${process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 30) + '...' : 'NÃO CONFIGURADO'}`);
 
 // Middleware
 app.use(cors());

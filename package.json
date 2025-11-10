@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon dev-server.js",
+    "dev:homol": "node -r dotenv/config server.js dotenv_config_path=.env.homol",
+    "dev:prod": "node -r dotenv/config server.js dotenv_config_path=.env.production",
     "fast-dev": "node fast-dev.js",
     "vercel-dev": "vercel dev",
     "build": "echo 'No build needed'",
@@ -22,6 +24,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "hasown": "^2.0.2",
     "multer": "^1.4.5-lts.1"
