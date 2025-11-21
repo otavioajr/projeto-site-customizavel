@@ -12,6 +12,13 @@ const supabaseSchema = typeof window.SUPABASE_SCHEMA === 'string' && window.SUPA
 
 console.log(`🔧 Supabase configurado para usar schema: "${supabaseSchema}"`);
 
+// Warning se schema não foi definido explicitamente
+if (!window.SUPABASE_SCHEMA) {
+  console.warn('⚠️ ATENÇÃO: SUPABASE_SCHEMA não foi definido! Usando schema padrão "public".');
+  console.warn('   Se você está em homologação, verifique se o config.js foi carregado corretamente.');
+  console.warn('   Esperado: window.SUPABASE_SCHEMA = "homol"');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   db: { schema: supabaseSchema }
 });
@@ -320,6 +327,15 @@ export async function saveInscription(pageSlug, formData, options = {}) {
       console.error('  Código do erro:', error.code);
       console.error('  Mensagem:', error.message);
       console.error('  Detalhes:', error.details);
+      console.error('  Schema atual:', supabaseSchema);
+
+      // Melhorar mensagem de erro para o usuário
+      if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+        throw new Error(`ERRO DE CONFIGURAÇÃO: Tabela não encontrada no schema "${supabaseSchema}". Verifique se o ambiente está configurado corretamente.`);
+      } else if (error.code === '42501' || error.message?.includes('permission')) {
+        throw new Error(`ERRO DE PERMISSÃO: Sem permissão para inserir no schema "${supabaseSchema}". Verifique as políticas RLS.`);
+      }
+
       throw error;
     }
     
@@ -639,16 +655,21 @@ export async function saveMultipleInscriptions(pageSlug, responsibleData, partic
   console.log('  maxParticipants:', maxParticipants);
   
   try {
+    // Garantir que participantsData seja sempre um array válido
+    const validParticipantsData = Array.isArray(participantsData) ? participantsData : [];
+
     // Preparar dados para o RPC
+    // Nota: O Supabase client serializa automaticamente objetos JS para JSONB
     const rpcParams = {
-      p_page_slug: pageSlug,
-      p_responsible_data: responsibleData,
-      p_participants_data: participantsData,
-      p_max_participants: maxParticipants,
-      p_responsible_participates: responsibleParticipates
+      p_page_slug: String(pageSlug),
+      p_responsible_data: responsibleData || {},
+      p_participants_data: validParticipantsData,
+      p_max_participants: Number(maxParticipants) || 0,
+      p_responsible_participates: Boolean(responsibleParticipates)
     };
 
     console.log('  Chamando RPC register_group...', rpcParams);
+    console.log('  participantsData type:', typeof validParticipantsData, Array.isArray(validParticipantsData));
 
     const { data, error } = await supabase
       .rpc('register_group', rpcParams);

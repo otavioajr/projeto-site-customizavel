@@ -1,6 +1,6 @@
 {
   "delay": 100,
-  "watch": ["dev-server.js", "server.js", "api/"],
+  "watch": ["dev-server.js", "server.js", "api/index.js"],
   "ext": "js,json",
   "legacyWatch": false,
   "signal": "SIGTERM",
@@ -30,6 +30,7 @@
     "**/*.log",
     "**/*.pid",
     ".env*",
+    "config.js",
     "vercel.json",
     "netlify.toml",
     "package*.json"

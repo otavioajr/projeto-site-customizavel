@@ -552,6 +552,7 @@
         console.warn('⚠️ Não foi possível carregar config. Usando valores padrão.');
         window.SUPABASE_URL = window.SUPABASE_URL || '';
         window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+        window.SUPABASE_SCHEMA = window.SUPABASE_SCHEMA || 'public';
       }
 
       const confirmationScript = document.createElement('script');
