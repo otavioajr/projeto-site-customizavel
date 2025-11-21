@@ -17,6 +17,7 @@ module.exports = (req, res) => {
   const config = `
 window.SUPABASE_URL = '${supabaseUrl}';
 window.SUPABASE_ANON_KEY = '${supabaseKey}';
+window.SUPABASE_SCHEMA = '${process.env.SUPABASE_SCHEMA || 'public'}';
 window.NODE_ENV = '${process.env.NODE_ENV || 'development'}';
   `.trim();
 

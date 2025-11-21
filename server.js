@@ -1,11 +1,27 @@
 // server.js - Servidor simples para upload de imagens
-require('dotenv').config(); // Carregar variáveis de ambiente
+// Carregar variáveis de ambiente de forma otimizada
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' 
+  : process.env.NODE_ENV === 'homol' ? '.env.homol' 
+  : '.env';
+console.log('DEBUG: Loading dotenv');
+require('dotenv').config({ path: envFile });
 
+console.log('DEBUG: Loading express');
 const express = require('express');
+console.log('DEBUG: Loading multer');
 const multer = require('multer');
+console.log('DEBUG: Loading path');
 const path = require('path');
+console.log('DEBUG: Loading fs');
 const fs = require('fs');
+console.log('DEBUG: Loading cors');
 const cors = require('cors');
+console.log('DEBUG: cors type:', typeof cors);
+try {
+  console.log('DEBUG: cors value:', cors);
+} catch (e) {
+  console.log('DEBUG: error printing cors:', e);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -136,6 +152,7 @@ app.get('/config.js', (req, res) => {
   const config = `
 window.SUPABASE_URL = '${process.env.SUPABASE_URL || ''}';
 window.SUPABASE_ANON_KEY = '${process.env.SUPABASE_ANON_KEY || ''}';
+window.SUPABASE_SCHEMA = '${process.env.SUPABASE_SCHEMA || 'public'}';
   `.trim();
   res.status(200).send(config);
 });

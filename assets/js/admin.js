@@ -1081,6 +1081,10 @@ function renderFormFieldsList() {
       <div class="form-group">
         <label>Label do Campo</label>
         <input type="text" class="field-label" data-index="${index}" value="${field.label || ''}" placeholder="Ex: Nome completo">
+        <small style="color: #666; font-size: 0.85em; margin-top: 4px; display: block;">
+          💡 <strong>Inscrições múltiplas:</strong> Campos como "Nome", "Idade", "CPF" se repetem para cada participante.
+          Para campos únicos do responsável, use labels como "Email do Responsável", "Contato Principal", etc.
+        </small>
       </div>
       <div class="form-group">
         <label>Placeholder (opcional)</label>

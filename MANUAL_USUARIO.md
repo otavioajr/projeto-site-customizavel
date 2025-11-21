@@ -1,5 +1,7 @@
 # Manual do Usuário - Landing Page Aventuras
 
+> 📖 **Documentação Principal**: Para visão geral do projeto, instalação e configuração, consulte o [`README.md`](README.md)
+
 ## 📖 Guia Completo para Gerenciar seu Site
 
 Este manual ensina como usar o painel administrativo para editar todo o conteúdo do seu site sem precisar de conhecimento técnico.

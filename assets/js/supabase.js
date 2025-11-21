@@ -5,7 +5,20 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 const supabaseUrl = window.SUPABASE_URL || 'https://yzsgoxrrhjiiulmnwrfo.supabase.co';
 const supabaseAnonKey = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6c2dveHJyaGppaXVsbW53cmZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMjQ1NDksImV4cCI6MjA3NjYwMDU0OX0.5F8gLht7b-Ig01Bxr0zTTSPeCfdYvBH81P-Z2afysOo';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Permitir qualquer schema customizado (public, homol, etc.)
+const supabaseSchema = typeof window.SUPABASE_SCHEMA === 'string' && window.SUPABASE_SCHEMA.trim()
+  ? window.SUPABASE_SCHEMA.trim()
+  : 'public';
+
+console.log(`🔧 Supabase configurado para usar schema: "${supabaseSchema}"`);
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  db: { schema: supabaseSchema }
+});
+
+export function getSupabaseSchema() {
+  return supabaseSchema;
+}
 
 // ============= FUNÇÕES DE PÁGINAS =============
 
@@ -619,196 +632,50 @@ function generateUUID() {
  */
 export async function saveMultipleInscriptions(pageSlug, responsibleData, participantsData = [], options = {}) {
   const { sessionSelections = [], maxParticipants = 0, responsibleParticipates = true } = options;
-  const groupId = generateUUID();
-  const totalParticipants = responsibleParticipates 
-    ? 1 + participantsData.length  // Responsável participa: 1 + outros
-    : participantsData.length;      // Responsável NÃO participa: apenas outros
   
-  console.log('🔵 [saveMultipleInscriptions] INÍCIO');
+  console.log('🔵 [saveMultipleInscriptions] INÍCIO (RPC Version)');
   console.log('  pageSlug:', pageSlug);
-  console.log('  groupId:', groupId);
-  console.log('  totalParticipants:', totalParticipants);
   console.log('  responsibleParticipates:', responsibleParticipates);
   console.log('  maxParticipants:', maxParticipants);
-  console.log('  responsibleData:', responsibleData);
-  console.log('  participantsData length:', participantsData.length);
-  console.log('  Supabase URL:', supabaseUrl);
-  console.log('  Supabase Key exists:', !!supabaseAnonKey);
   
   try {
-    // Validar vagas disponíveis
-    if (maxParticipants > 0) {
-      const { data: availabilityCheck, error: checkError } = await supabase
-        .rpc('check_available_slots', {
-          p_page_slug: pageSlug,
-          p_requested_slots: totalParticipants,
-          p_max_participants: maxParticipants
-        });
-      
-      if (checkError) throw checkError;
-      
-      if (availabilityCheck && availabilityCheck.length > 0 && !availabilityCheck[0].available) {
-        throw new Error(`LIMIT_REACHED:${availabilityCheck[0].message}`);
-      }
-    }
-    
-    // Validar sessões se houver
-    if (Array.isArray(sessionSelections) && sessionSelections.length > 0) {
-      for (const selection of sessionSelections) {
-        const capacity = parseInt(selection?.capacity, 10);
-        if (!selection?.storageKey || !selection?.sessionId || !Number.isFinite(capacity) || capacity <= 0) {
-          continue;
-        }
-        
-        const column = `form_data->>'${selection.storageKey}'`;
-        
-        // Buscar inscrições para essa sessão
-        const { data: sessionInscriptions, error: sessionError } = await supabase
-          .from('inscriptions')
-          .select('form_data')
-          .eq('page_slug', pageSlug)
-          .eq(column, selection.sessionId);
-        
-        if (sessionError) throw sessionError;
-        
-        // Contar participantes já inscritos
-        let currentParticipants = 0;
-        if (Array.isArray(sessionInscriptions)) {
-          currentParticipants = sessionInscriptions.reduce((sum, inscription) => {
-            const groupSize = inscription?.form_data?._group_size || inscription?.form_data?.total_participants || 1;
-            return sum + parseInt(groupSize, 10);
-          }, 0);
-        }
-        
-        // Verificar se há espaço para o novo grupo
-        if (currentParticipants + totalParticipants > capacity) {
-          const sessionName = selection.sessionDisplay || selection.sessionTitle || 'A sessão selecionada';
-          throw new Error(`SESSION_FULL:${sessionName} já tem ${currentParticipants} participantes de ${capacity} vagas. Não há espaço para ${totalParticipants} pessoas.`);
-        }
-      }
-    }
-    
-    // Obter próximo sequence
-    let nextSequence = await computeNextSequenceSupabase(pageSlug);
-    
-    // Preparar inscrições
-    const inscriptions = [];
-    
-    // 1. Se responsável PARTICIPA: criar inscrição para ele
-    if (responsibleParticipates) {
-      const responsibleInscription = {
-        page_slug: pageSlug,
-        group_id: groupId,
-        is_responsible: true,
-        responsible_id: null,
-        participant_number: 1,
-        total_participants: totalParticipants,
-        form_data: {
-          ...responsibleData,
-          _sequence: nextSequence,
-          _group_size: totalParticipants,
-          _participant_number: 1,
-          _total_participants: totalParticipants,
-          _is_responsible: true
-        },
-        status: 'pending',
-        created_at: new Date().toISOString()
-      };
-      
-      inscriptions.push(responsibleInscription);
-      nextSequence++; // Incrementar para os próximos participantes
-    }
-    
-    // 2. Inscrições dos participantes
-    for (let i = 0; i < participantsData.length; i++) {
-      // Se responsável participa: participantes são 2, 3, 4...
-      // Se responsável NÃO participa: participantes são 1, 2, 3...
-      const participantNumber = responsibleParticipates ? i + 2 : i + 1;
-      const participantInscription = {
-        page_slug: pageSlug,
-        group_id: groupId,
-        is_responsible: false,
-        responsible_id: null,
-        participant_number: participantNumber,
-        total_participants: totalParticipants,
-        form_data: {
-          ...participantsData[i],
-          _sequence: nextSequence + i,
-          _group_size: totalParticipants,
-          _participant_number: participantNumber,
-          _total_participants: totalParticipants,
-          _is_responsible: false,
-          // Adicionar dados do responsável como contato quando ele NÃO participa
-          ...(!responsibleParticipates ? {
-            _responsible_name: responsibleData['Nome do Responsável'] || responsibleData.nome || '',
-            _responsible_email: responsibleData.email || responsibleData.Email || '',
-            _responsible_phone: responsibleData.telefone || responsibleData.Telefone || ''
-          } : {})
-        },
-        status: 'pending',
-        created_at: new Date().toISOString()
-      };
-      
-      inscriptions.push(participantInscription);
-    }
-    
-    // Inserir todas as inscrições
-    console.log('  Enviando', inscriptions.length, 'inscrições para Supabase...');
+    // Preparar dados para o RPC
+    const rpcParams = {
+      p_page_slug: pageSlug,
+      p_responsible_data: responsibleData,
+      p_participants_data: participantsData,
+      p_max_participants: maxParticipants,
+      p_responsible_participates: responsibleParticipates
+    };
+
+    console.log('  Chamando RPC register_group...', rpcParams);
+
     const { data, error } = await supabase
-      .from('inscriptions')
-      .insert(inscriptions)
-      .select();
-    
+      .rpc('register_group', rpcParams);
+
     if (error) {
-      console.error('❌ [saveMultipleInscriptions] Erro do Supabase ao inserir:', error);
-      console.error('  Código do erro:', error.code);
-      console.error('  Mensagem:', error.message);
-      console.error('  Detalhes:', error.details);
+      console.error('❌ [saveMultipleInscriptions] Erro do RPC:', error);
+      // Tentar extrair mensagem amigável
+      if (error.message && error.message.includes('LIMIT_REACHED')) {
+        throw new Error(error.message); // Já está formatada
+      }
       throw error;
     }
+
+    console.log('✅ [saveMultipleInscriptions] Sucesso:', data);
     
-    if (!data || data.length === 0) {
-      console.error('❌ [saveMultipleInscriptions] CRÍTICO: Supabase retornou sem erro mas sem dados!');
-      throw new Error('Falha ao salvar inscrições: Nenhum dado retornado do Supabase.');
-    }
-    
-    console.log('✅ [saveMultipleInscriptions] Inscrições inseridas:', data.length);
-    
-    // Atualizar responsible_id dos participantes (apenas se responsável participa)
-    if (responsibleParticipates && data && data.length > 0) {
-      const responsibleId = data[0].id; // Primeira inscrição é do responsável
-      const participantIds = data.slice(1).map(p => p.id);
-      
-      if (participantIds.length > 0) {
-        const { error: updateError } = await supabase
-          .from('inscriptions')
-          .update({ responsible_id: responsibleId })
-          .in('id', participantIds);
-        
-        if (updateError) {
-          console.warn('Aviso: Não foi possível atualizar responsible_id:', updateError);
-        }
-      }
-    }
-    
-    const result = {
+    return {
       success: true,
-      groupId: groupId,
-      totalParticipants: totalParticipants,
-      inscriptions: data
+      groupId: data.group_id,
+      message: data.message
     };
-    
-    console.log('✅ [saveMultipleInscriptions] SUCESSO! Retornando:', result);
-    return result;
-    
+
   } catch (error) {
-    console.error('❌ [saveMultipleInscriptions] ERRO CAPTURADO:', error);
-    console.error('  Tipo:', error.constructor.name);
-    console.error('  Mensagem:', error.message);
-    console.error('  Stack:', error.stack);
+    console.error('❌ [saveMultipleInscriptions] ERRO:', error);
     throw error;
   }
 }
+
 
 /**
  * Busca todas as inscrições de um grupo
