@@ -8,9 +8,10 @@ import {
 } from './supabase.js';
 
 // ==================== HELPERS ====================
-function showErrorModal(message) {
+function showErrorModal(message, title = 'Atenção') {
   const overlay = document.getElementById('error-modal-overlay');
   const messageEl = document.getElementById('error-modal-message');
+  const titleEl = document.getElementById('error-modal-title');
   const closeBtn = document.getElementById('error-modal-close');
 
   if (!overlay || !messageEl || !closeBtn) {
@@ -18,10 +19,53 @@ function showErrorModal(message) {
     return;
   }
 
-  messageEl.textContent = message;
-  overlay.classList.add('active');
+  // Detectar tipo de erro para definir título e ícone apropriados
+  let errorTitle = title;
+  let iconEmoji = '⚠️';
+  
+  if (message.includes('Vagas esgotadas') || message.includes('esgotaram') || message.includes('lotadas')) {
+    errorTitle = 'Vagas Esgotadas';
+    iconEmoji = '🚫';
+  } else if (message.includes('erro') || message.includes('Erro') || message.includes('não foi salva')) {
+    errorTitle = 'Erro';
+    iconEmoji = '❌';
+  } else if (message.includes('conexão') || message.includes('internet') || message.includes('rede')) {
+    errorTitle = 'Erro de Conexão';
+    iconEmoji = '📡';
+  } else if (message.includes('permissão')) {
+    errorTitle = 'Erro de Permissão';
+    iconEmoji = '🔒';
+  }
 
-  const close = () => overlay.classList.remove('active');
+  // Atualizar título
+  if (titleEl) {
+    titleEl.textContent = errorTitle;
+  }
+
+  // Atualizar ícone
+  const iconEl = overlay.querySelector('.error-modal-icon');
+  if (iconEl) {
+    iconEl.textContent = iconEmoji;
+  }
+
+  // Atualizar mensagem
+  messageEl.textContent = message;
+  
+  // Mostrar modal
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden', 'false');
+
+  // Focar no botão para acessibilidade
+  setTimeout(() => {
+    closeBtn.focus();
+  }, 100);
+
+  const close = () => {
+    overlay.classList.remove('active');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', handleEscape);
+  };
+
   closeBtn.onclick = close;
   overlay.onclick = (e) => {
     if (e.target === overlay) close();
@@ -30,7 +74,6 @@ function showErrorModal(message) {
   const handleEscape = (e) => {
     if (e.key === 'Escape' && overlay.classList.contains('active')) {
       close();
-      document.removeEventListener('keydown', handleEscape);
     }
   };
   document.addEventListener('keydown', handleEscape);

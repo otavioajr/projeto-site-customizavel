@@ -3,25 +3,13 @@
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' 
   : process.env.NODE_ENV === 'homol' ? '.env.homol' 
   : '.env';
-console.log('DEBUG: Loading dotenv');
 require('dotenv').config({ path: envFile });
 
-console.log('DEBUG: Loading express');
 const express = require('express');
-console.log('DEBUG: Loading multer');
 const multer = require('multer');
-console.log('DEBUG: Loading path');
 const path = require('path');
-console.log('DEBUG: Loading fs');
 const fs = require('fs');
-console.log('DEBUG: Loading cors');
 const cors = require('cors');
-console.log('DEBUG: cors type:', typeof cors);
-try {
-  console.log('DEBUG: cors value:', cors);
-} catch (e) {
-  console.log('DEBUG: error printing cors:', e);
-}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
