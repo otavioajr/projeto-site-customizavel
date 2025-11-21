@@ -1,5 +1,7 @@
 # 🔧 Guia de Configuração - Projeto Site Customizável
 
+> 📖 **Documentação Principal**: Para visão geral do projeto, instalação e outros tópicos, consulte o [`README.md`](README.md)
+
 Este documento consolida todas as configurações necessárias para o projeto.
 
 ## Índice

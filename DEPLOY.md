@@ -1,5 +1,7 @@
 # Guia de Deploy - Landing Page Aventuras
 
+> 📖 **Documentação Principal**: Para visão geral do projeto, instalação e outros tópicos, consulte o [`README.md`](README.md)
+
 ## 🚀 Deploy na Vercel (Recomendado)
 
 ### Opção 1: Deploy via CLI (Mais Rápido)
@@ -429,8 +431,8 @@ self.addEventListener('install', (e) => {
 ## 📞 Suporte
 
 ### Documentação
-- README.md: Visão geral
-- IMPLEMENTACAO.md: Detalhes técnicos
+- README.md: Visão geral e documentação consolidada
+- CONFIGURACAO.md: Configurações detalhadas
 - DEPLOY.md: Este arquivo
 
 ### Recursos

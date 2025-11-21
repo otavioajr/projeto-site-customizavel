@@ -1,5 +1,7 @@
 # 🔧 Guia de Troubleshooting
 
+> 📖 **Documentação Principal**: Para visão geral do projeto, instalação e outros tópicos, consulte o [`README.md`](README.md)
+
 Este documento consolida soluções para todos os problemas comuns do projeto.
 
 ## Índice
@@ -654,6 +656,91 @@ Quando algo não funciona, siga esta ordem:
 - [ ] Formato dos dados está correto
 - [ ] IDs e referências válidas
 - [ ] JSON válido (sem erros de sintaxe)
+
+---
+
+# Problemas com Performance
+
+## Servidor Demora para Iniciar (npm run dev)
+
+### Sintoma
+O servidor demora ~5 minutos para iniciar ou trava completamente.
+
+### Causas Identificadas
+
+1. **Dotenv lento**: Carregando todos os arquivos `.env*` desnecessariamente
+2. **Express travando**: Módulo não carrega (timeout)
+3. **Porta ocupada**: Processos duplicados causando conflitos
+
+### Soluções Implementadas
+
+#### ✅ 1. Otimização do Dotenv
+- Agora carrega apenas o arquivo `.env` necessário baseado em `NODE_ENV`
+- Redução de **3.3 segundos → 4ms** (800x mais rápido)
+
+#### ✅ 2. Verificação de Porta
+- Verifica se a porta está ocupada ANTES de tentar iniciar
+- Mensagem de erro clara com instruções de solução
+- Evita loops infinitos de tentativas
+
+#### ✅ 3. Script de Parada Melhorado
+- Limpa processos na porta 3001
+- Para nodemon e processos relacionados
+
+### Solução Rápida
+
+Se o problema persistir:
+
+```bash
+# 1. Parar todos os processos
+./parar-servidor.sh
+
+# 2. Limpar cache e reinstalar dependências
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+
+# 3. Testar carregamento
+node diagnostico-lentidao.js
+
+# 4. Iniciar servidor
+npm run dev
+```
+
+### Solução Alternativa
+
+Se precisar iniciar rapidamente AGORA:
+
+```bash
+# 1. Parar processos
+./parar-servidor.sh
+
+# 2. Usar fast-dev (sem nodemon)
+npm run fast-dev
+```
+
+### Verificação de Porta
+
+Sempre verifique se a porta está livre antes de iniciar:
+
+```bash
+# Ver processos na porta 3001
+lsof -ti:3001
+
+# Matar processo específico
+kill -9 <PID>
+
+# Ou usar o script
+./parar-servidor.sh
+```
+
+### Diagnóstico
+
+Execute o script de diagnóstico para identificar qual módulo está causando lentidão:
+
+```bash
+node diagnostico-lentidao.js
+```
 
 ---
 

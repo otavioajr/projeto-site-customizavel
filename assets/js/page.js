@@ -110,25 +110,28 @@ function buildSessionDisplay(session) {
 // Baseado em palavras-chave EXPLÍCITAS no label do campo
 function isParticipantField(field) {
   const label = (field.label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  
-  // Palavras-chave que indicam campo REPETÍVEL (para cada participante)
-  const participantKeywords = ['participante', 'pessoa'];
-  
+
   // Palavras-chave que indicam campo ÚNICO (do responsável/organizador)
-  const responsibleKeywords = ['responsavel', 'organizador'];
-  
-  // Se tem palavra de participante, é campo repetível
-  if (participantKeywords.some(keyword => label.includes(keyword))) {
-    return true;
-  }
-  
+  // Devem ser específicas para evitar falsos positivos
+  const responsibleKeywords = [
+    'responsavel',
+    'organizador',
+    'contato principal',
+    'contato do responsavel',
+    'whatsapp do responsavel',
+    'telefone do responsavel',
+    'email do responsavel',
+    'dados do responsavel'
+  ];
+
   // Se tem palavra de responsável, é campo único
   if (responsibleKeywords.some(keyword => label.includes(keyword))) {
     return false;
   }
-  
-  // Default: campos sem palavra-chave são do responsável (únicos)
-  return false;
+
+  // Default: campos sem palavra-chave específica do responsável são de participante (repetíveis)
+  // Isso inclui campos comuns como "Nome", "Idade", "CPF", "Email", etc.
+  return true;
 }
 
 // Separa campos em dois grupos: campos do grupo vs. campos por participante
@@ -148,6 +151,65 @@ function categorizeFields(fields) {
   });
 
   return { groupFields, participantFields };
+}
+
+function normalizeLabelKey(label = '') {
+  return label
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Extrai a "base semântica" de um campo para comparação
+// Remove sufixos como "do responsável" e aplica sinônimos
+function extractFieldBase(label) {
+  const normalized = normalizeLabelKey(label);
+
+  // Remove sufixos comuns que indicam contexto (responsável, participante, etc.)
+  const suffixesToRemove = [
+    'do responsavel',
+    'da responsavel',
+    'dos responsaveis',
+    'das responsaveis',
+    'do organizador',
+    'da organizador',
+    'do participante',
+    'da participante',
+    'dos participantes',
+    'das participantes',
+    'principal',
+    'de contato',
+    'para contato'
+  ];
+
+  let base = normalized;
+  suffixesToRemove.forEach(suffix => {
+    // Remove o sufixo da string, com espaços opcionais ao redor
+    base = base.replace(new RegExp(`\\s*${suffix}\\s*$`, 'g'), '');
+    base = base.replace(new RegExp(`\\s*${suffix}\\s+`, 'g'), ' ');
+  });
+
+  base = base.trim();
+
+  // Mapeamento de sinônimos para normalizar variações
+  const synonymMap = {
+    'telefone/whatsapp': 'telefone',
+    'whatsapp/telefone': 'telefone',
+    'whatsapp': 'telefone',
+    'celular': 'telefone',
+    'fone': 'telefone',
+    'e-mail': 'email',
+    'correio eletronico': 'email',
+    'cpf/rg': 'cpf',
+    'rg/cpf': 'cpf',
+    'documento': 'cpf',
+    'doc': 'cpf'
+  };
+
+  return synonymMap[base] || base;
 }
 
 // Renderiza um único campo de formulário
@@ -430,6 +492,18 @@ async function renderForm(container, page) {
   if (allowMultipleParticipants) {
     // MODO GRUPO: Renderizar campos separados em grupo e participantes
     const { groupFields, participantFields } = categorizeFields(normalizedFields);
+    const responsibleFields = groupFields;
+
+    // Usa comparação semântica para evitar duplicação de campos
+    // Ex: "Nome do responsável" e "Nome" têm a mesma base semântica
+    const responsibleBaseSet = new Set(responsibleFields.map(field => extractFieldBase(field.label)));
+    const responsibleExtraFields = participantFields.filter(field => {
+      const participantBase = extractFieldBase(field.label);
+      return !responsibleBaseSet.has(participantBase);
+    });
+
+    const hasResponsibleFields = responsibleFields.length > 0;
+    const hasParticipantFields = participantFields.length > 0;
 
     // Campo de quantidade
     const quantityOptions = [];
@@ -446,20 +520,21 @@ async function renderForm(container, page) {
         </select>
         <span class="form-hint">👥 Selecione o número de pessoas que participarão da atividade</span>
       </div>
-      
-      <div class="form-field form-field--checkbox" style="margin-top: 15px;">
-        <label style="display: flex; align-items: center; gap: 8px;">
-          <input type="checkbox" id="responsible-participates" name="_responsible_participates" checked>
-          <span>Eu também vou participar</span>
-        </label>
-        <span class="form-hint">✅ Marque se você (responsável) também participará. Se desmarcado, você só fornece os dados de contato.</span>
-      </div>
+
+      <div id="post-quantity-sections" style="display: none;">
+        <div id="responsible-participates-wrapper" class="form-field form-field--checkbox" style="margin-top: 15px; display: none;">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="responsible-participates" name="_responsible_participates" checked>
+            <span>Eu também vou participar</span>
+          </label>
+          <span class="form-hint">✅ Marque se você (responsável) também participará. Se desmarcado, você só fornece os dados de contato.</span>
+        </div>
     `;
 
     // Campos do grupo (renderizados uma vez)
-    if (groupFields.length > 0) {
-      fieldsHtml += '<div class="form-section form-section--group"><h3 class="form-section-title">Dados do Responsável</h3>';
-      groupFields.forEach((field, index) => {
+    if (hasResponsibleFields) {
+      fieldsHtml += '<div id="responsible-contact-fields" class="form-section form-section--group" style="display: none;"><h3 class="form-section-title">Dados do Responsável</h3>';
+      responsibleFields.forEach((field, index) => {
         fieldsHtml += renderSingleField(field, index, {
           prefix: 'group',
           sessionUsage,
@@ -469,6 +544,16 @@ async function renderForm(container, page) {
           requiredSessionFieldIds
         });
       });
+
+      // Campos do participante para o próprio responsável (quando ele participa)
+      if (responsibleExtraFields.length > 0) {
+        fieldsHtml += '<div id="responsible-participant-fields" class="form-section form-section--participant" style="display: none; margin-top: 16px;"><h3 class="form-section-title">Dados do Responsável como Participante</h3>';
+        responsibleExtraFields.forEach((field, index) => {
+          fieldsHtml += renderSingleField(field, index, { prefix: 'responsible' });
+        });
+        fieldsHtml += '</div>';
+      }
+
       fieldsHtml += '</div>';
     }
 
@@ -476,6 +561,9 @@ async function renderForm(container, page) {
     if (participantFields.length > 0) {
       fieldsHtml += '<div id="participants-container" class="participants-container"></div>';
     }
+
+    // Fecha o wrapper que só aparece após a escolha de quantidade
+    fieldsHtml += '</div>';
   } else {
     // MODO INDIVIDUAL: Renderização original
     normalizedFields.forEach((field, index) => {
@@ -582,46 +670,198 @@ async function renderForm(container, page) {
     const quantitySelect = form.querySelector('#participant-quantity');
     const participantsContainer = form.querySelector('#participants-container');
     const responsibleParticipatesCheckbox = form.querySelector('#responsible-participates');
-    const { participantFields } = categorizeFields(normalizedFields);
+    const responsibleParticipatesWrapper = form.querySelector('#responsible-participates-wrapper');
+    const responsibleParticipantSection = form.querySelector('#responsible-participant-fields');
+    const responsibleContactSection = form.querySelector('#responsible-contact-fields');
+    const postQuantitySections = form.querySelector('#post-quantity-sections');
+    const { participantFields, groupFields } = categorizeFields(normalizedFields);
+    const responsibleFields = groupFields;
 
-    const renderParticipantFields = () => {
-      const quantity = parseInt(quantitySelect.value, 10);
-      const responsibleParticipates = responsibleParticipatesCheckbox ? responsibleParticipatesCheckbox.checked : true;
-      
+    // Usa comparação semântica para evitar duplicação de campos
+    // Ex: "Nome do responsável" e "Nome" têm a mesma base semântica
+    const responsibleBaseSet = new Set(responsibleFields.map(field => extractFieldBase(field.label)));
+    const responsibleExtraFields = participantFields.filter(field => {
+      const participantBase = extractFieldBase(field.label);
+      return !responsibleBaseSet.has(participantBase);
+    });
+
+    const hasParticipantFields = participantFields.length > 0;
+    const hasResponsibleFields = responsibleFields.length > 0;
+
+    // Debug: Log categorização de campos
+    console.log('📊 [renderForm] Categorização de campos:');
+    console.log('  Total de campos:', normalizedFields.length);
+    console.log('  Campos de participante:', participantFields.length, participantFields.map(f => f.label));
+    console.log('  Campos de responsável:', responsibleFields.length, responsibleFields.map(f => f.label));
+    console.log('  Campos extras do responsável como participante:', responsibleExtraFields.length, responsibleExtraFields.map(f => f.label));
+
+    // Debug: Mostrar mapeamento de bases semânticas
+    const filteredFields = participantFields.filter(field => {
+      const participantBase = extractFieldBase(field.label);
+      return responsibleBaseSet.has(participantBase);
+    });
+    if (filteredFields.length > 0) {
+      console.log('  ❌ Campos filtrados (duplicados):', filteredFields.map(f => {
+        return `"${f.label}" (base: "${extractFieldBase(f.label)}")`;
+      }));
+    }
+
+    console.log('  hasParticipantFields:', hasParticipantFields);
+    console.log('  hasResponsibleFields:', hasResponsibleFields);
+
+    const setSectionRequired = (section, enabled) => {
+      if (!section) return;
+      const inputs = section.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        const wasRequired = input.dataset.originalRequired === 'true';
+        if (enabled) {
+          if (wasRequired || input.required) {
+            input.required = true;
+            input.dataset.originalRequired = 'true';
+          }
+        } else {
+          if (input.required) input.dataset.originalRequired = 'true';
+          input.required = false;
+        }
+      });
+    };
+
+    const renderParticipantFields = (quantity, responsibleParticipates) => {
+      if (!participantsContainer || participantFields.length === 0) return;
       participantsContainer.innerHTML = '';
 
-      if (quantity > 0) {
-        // Se responsável participa: ele é o participante 1, então criar quantity-1 campos
-        // Se responsável NÃO participa: criar quantity campos
-        const numFieldsToCreate = responsibleParticipates ? quantity - 1 : quantity;
-        const startNumber = responsibleParticipates ? 2 : 1;
+      if (!Number.isFinite(quantity) || quantity <= 0) return;
 
-        for (let i = 0; i < numFieldsToCreate; i++) {
-          const participantSection = document.createElement('div');
-          participantSection.className = 'form-section form-section--participant';
-          participantSection.innerHTML = `
-            <h3 class="form-section-title">Participante ${startNumber + i}</h3>
-          `;
+      const numFieldsToCreate = responsibleParticipates ? quantity - 1 : quantity;
+      const startNumber = responsibleParticipates ? 2 : 1;
 
-          participantFields.forEach((field, fieldIndex) => {
-            const fieldHtml = renderSingleField(field, fieldIndex, {
-              prefix: `participant_${i}`
-            });
-            participantSection.innerHTML += fieldHtml;
+      if (numFieldsToCreate <= 0) return;
+
+      for (let i = 0; i < numFieldsToCreate; i++) {
+        const participantSection = document.createElement('div');
+        participantSection.className = 'form-section form-section--participant';
+        participantSection.innerHTML = `
+          <h3 class="form-section-title">Participante ${startNumber + i}</h3>
+        `;
+
+        participantFields.forEach((field, fieldIndex) => {
+          const fieldHtml = renderSingleField(field, fieldIndex, {
+            prefix: `participant_${i}`
           });
+          participantSection.innerHTML += fieldHtml;
+        });
 
-          participantsContainer.appendChild(participantSection);
-        }
+        participantsContainer.appendChild(participantSection);
       }
     };
 
-    if (quantitySelect && participantsContainer && participantFields.length > 0) {
-      quantitySelect.addEventListener('change', renderParticipantFields);
-      
+    const updateSectionsByQuantity = () => {
+      const quantity = parseInt(quantitySelect.value, 10);
+      const hasQuantity = Number.isFinite(quantity) && quantity > 0;
+
+      if (postQuantitySections) {
+        postQuantitySections.style.display = hasQuantity ? 'block' : 'none';
+      }
+
+      // Caso sem quantidade, limpa tudo
+      if (!hasQuantity) {
+        if (responsibleParticipantSection) {
+          responsibleParticipantSection.style.display = 'none';
+          setSectionRequired(responsibleParticipantSection, false);
+        }
+        if (responsibleContactSection) {
+          responsibleContactSection.style.display = 'none';
+          setSectionRequired(responsibleContactSection, false);
+        }
+        if (responsibleParticipatesWrapper) {
+          responsibleParticipatesWrapper.style.display = 'none';
+        }
+        if (participantsContainer) {
+          participantsContainer.innerHTML = '';
+        }
+        return;
+      }
+
+      // Quantidade == 1: só participante, sem responsável
+      if (quantity === 1) {
+        if (responsibleParticipatesWrapper) {
+          responsibleParticipatesWrapper.style.display = 'none';
+        }
+        if (responsibleParticipantSection) {
+          responsibleParticipantSection.style.display = 'none';
+          setSectionRequired(responsibleParticipantSection, false);
+        }
+
+        // Se há campos de participante, esconde campos do responsável
+        // Se NÃO há campos de participante, mostra campos do responsável (pois ele é o único)
+        if (responsibleContactSection) {
+          if (hasParticipantFields) {
+            responsibleContactSection.style.display = 'none';
+            setSectionRequired(responsibleContactSection, false);
+          } else {
+            responsibleContactSection.style.display = 'block';
+            setSectionRequired(responsibleContactSection, true);
+          }
+        }
+
+        renderParticipantFields(quantity, false);
+        return;
+      }
+
+      // Quantidade >= 2: mostra responsável e opcionalmente como participante
+      const showCheckbox = hasParticipantFields && quantity >= 2;
+      if (responsibleParticipatesWrapper) {
+        responsibleParticipatesWrapper.style.display = showCheckbox ? 'block' : 'none';
+      }
+      if (showCheckbox && responsibleParticipatesCheckbox && responsibleParticipatesCheckbox.dataset.forced !== 'true') {
+        responsibleParticipatesCheckbox.checked = true;
+      }
+      if (!showCheckbox && responsibleParticipatesCheckbox) {
+        responsibleParticipatesCheckbox.checked = false;
+      }
+
+      if (responsibleContactSection) {
+        responsibleContactSection.style.display = hasResponsibleFields ? 'block' : 'none';
+        setSectionRequired(responsibleContactSection, hasResponsibleFields);
+      }
+
+      const responsibleParticipates = showCheckbox
+        ? (responsibleParticipatesCheckbox ? responsibleParticipatesCheckbox.checked : false)
+        : false;
+
+      if (responsibleParticipantSection) {
+        const shouldShowResponsibleFields = responsibleParticipates && responsibleExtraFields.length > 0;
+        responsibleParticipantSection.style.display = shouldShowResponsibleFields ? 'block' : 'none';
+        setSectionRequired(responsibleParticipantSection, shouldShowResponsibleFields);
+      }
+
+      renderParticipantFields(quantity, responsibleParticipates);
+    };
+
+    if (quantitySelect) {
+      quantitySelect.addEventListener('change', updateSectionsByQuantity);
+
       // Reagir a mudanças no checkbox do responsável
       if (responsibleParticipatesCheckbox) {
-        responsibleParticipatesCheckbox.addEventListener('change', renderParticipantFields);
+        responsibleParticipatesCheckbox.addEventListener('change', updateSectionsByQuantity);
+        // Permite manter estado quando o usuário mexer
+        responsibleParticipatesCheckbox.addEventListener('change', () => {
+          responsibleParticipatesCheckbox.dataset.forced = 'true';
+        });
       }
+
+      // Inicializar estado do bloco do responsável participante (visibilidade + required)
+      setSectionRequired(responsibleParticipantSection, false);
+
+      // Renderizar campos inicialmente se já houver um valor selecionado
+      if (quantitySelect.value) {
+        updateSectionsByQuantity();
+      }
+    } else {
+      console.error('❌ [Form] Elementos necessários não encontrados:', {
+        quantitySelect: !!quantitySelect,
+        participantsContainer: !!participantsContainer
+      });
     }
   }
 
@@ -663,6 +903,7 @@ async function handleFormSubmit(form, config, page) {
     const data = {};
     const sessionSelections = [];
     const allowMultipleParticipants = config.allow_multiple_participants || false;
+    let responsibleParticipates = false;
 
     // Helper para coletar valor de um campo
     const collectFieldValue = (field, prefix = '') => {
@@ -688,52 +929,78 @@ async function handleFormSubmit(form, config, page) {
       // MODO GRUPO: Coletar dados separadamente
       const groupSize = parseInt(formData.get('_group_size'), 10) || 1;
       const groupId = `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const { groupFields, participantFields } = categorizeFields(config.fields);
+      const responsibleFields = groupFields;
+      const responsibleLabelSet = new Set(responsibleFields.map(field => normalizeLabelKey(field.label)));
+      const responsibleParticipatesCheckbox = form.querySelector('#responsible-participates');
 
       data._group_size = groupSize;
       data._group_id = groupId;
 
-      const { groupFields, participantFields } = categorizeFields(config.fields);
+      responsibleParticipates = groupSize >= 2
+        ? (responsibleParticipatesCheckbox ? responsibleParticipatesCheckbox.checked : false)
+        : false;
 
-      // Coletar dados do grupo
+      // Coletar dados do grupo/responsável (apenas se houve campos)
       const groupData = {};
-      groupFields.forEach(field => {
-        if (field.type === 'sessions') {
-          // Sessions ficam no nível raiz, não em group_data
-          const selected = form.querySelector(`input[name="session-${field.id}"]:checked`);
-          if (selected) {
-            const sessionId = selected.value;
-            const session = (field.sessions || []).find(item => item.id === sessionId);
-            if (session) {
-              const display = buildSessionDisplay(session);
-              const storageKey = `_session_${field.id}`;
-              data[field.label] = display || sessionId;
-              data[storageKey] = sessionId;
-              sessionSelections.push({
-                fieldId: field.id,
-                storageKey,
-                sessionId,
-                capacity: session.capacity,
-                fieldLabel: field.label,
-                sessionTitle: session.title,
-                sessionDisplay: display
-              });
+      if (groupSize >= 2 && responsibleFields.length > 0) {
+        responsibleFields.forEach(field => {
+          if (field.type === 'sessions') {
+            // Sessions ficam no nível raiz, não em group_data
+            const selected = form.querySelector(`input[name="session-${field.id}"]:checked`);
+            if (selected) {
+              const sessionId = selected.value;
+              const session = (field.sessions || []).find(item => item.id === sessionId);
+              if (session) {
+                const display = buildSessionDisplay(session);
+                const storageKey = `_session_${field.id}`;
+                data[field.label] = display || sessionId;
+                data[storageKey] = sessionId;
+                sessionSelections.push({
+                  fieldId: field.id,
+                  storageKey,
+                  sessionId,
+                  capacity: session.capacity,
+                  fieldLabel: field.label,
+                  sessionTitle: session.title,
+                  sessionDisplay: display
+                });
+              }
             }
+          } else {
+            groupData[field.label] = collectFieldValue(field, 'group');
           }
-        } else {
-          groupData[field.label] = collectFieldValue(field, 'group');
-        }
-      });
+        });
+      }
 
       data.group_data = groupData;
 
       // Coletar dados dos participantes
       const participants = [];
-      for (let i = 0; i < groupSize; i++) {
-        const participant = {};
-        participantFields.forEach(field => {
-          participant[field.label] = collectFieldValue(field, `participant_${i}`);
-        });
-        participants.push(participant);
+
+      if (participantFields.length > 0) {
+        if (responsibleParticipates) {
+          const responsibleParticipant = {};
+          participantFields.forEach(field => {
+            const normalizedLabel = normalizeLabelKey(field.label);
+            // Se o campo já existe no responsável, reaproveita o valor do responsável
+            if (responsibleLabelSet.has(normalizedLabel)) {
+              responsibleParticipant[field.label] = groupData[field.label] || '';
+            } else {
+              responsibleParticipant[field.label] = collectFieldValue(field, 'responsible');
+            }
+          });
+          participants.push(responsibleParticipant);
+        }
+
+        const numOtherParticipants = Math.max(responsibleParticipates ? groupSize - 1 : groupSize, 0);
+        for (let i = 0; i < numOtherParticipants; i++) {
+          const participant = {};
+          participantFields.forEach(field => {
+            participant[field.label] = collectFieldValue(field, `participant_${i}`);
+          });
+          participants.push(participant);
+        }
       }
 
       data.participants = participants;
@@ -801,10 +1068,6 @@ async function handleFormSubmit(form, config, page) {
     
     if (allowMultipleParticipants && data._group_size > 1) {
       // MODO GRUPO: Usar saveMultipleInscriptions
-      // Ler do checkbox se o responsável participa
-      const responsibleParticipatesCheckbox = form.querySelector('#responsible-participates');
-      const responsibleParticipates = responsibleParticipatesCheckbox ? responsibleParticipatesCheckbox.checked : true;
-      
       const responsibleData = {
         ...data.group_data,
         '_página': page.label,
@@ -822,20 +1085,10 @@ async function handleFormSubmit(form, config, page) {
       }
       
       // Preparar dados dos participantes
-      let participantsData;
-      if (responsibleParticipates) {
-        // Responsável participa: ele é o participante 1, outros começam do 2
-        participantsData = data.participants.map((participant, index) => ({
-          ...participant,
-          _participant_number: index + 2 // Responsável é 1, participantes são 2+
-        }));
-      } else {
-        // Responsável NÃO participa: participantes começam do 1
-        participantsData = data.participants.map((participant, index) => ({
-          ...participant,
-          _participant_number: index + 1 // Participantes são 1, 2, 3...
-        }));
-      }
+      const participantsData = data.participants.map((participant, index) => ({
+        ...participant,
+        _participant_number: index + 1
+      }));
       
       result = await saveMultipleInscriptions(
         page.slug,

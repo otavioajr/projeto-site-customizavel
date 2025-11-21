@@ -5,6 +5,10 @@
   "legacyWatch": false,
   "signal": "SIGTERM",
   "restartable": "rs",
+  "restartDelay": 1000,
+  "events": {
+    "restart": "echo '🔄 Reiniciando servidor...'"
+  },
   "env": {
     "NODE_ENV": "development"
   },

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Testes | Aventuras</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap');
+
+    :root {
+      --bg: #0b1021;
+      --card: #0f172a;
+      --stroke: rgba(255, 255, 255, 0.08);
+      --primary: #5eead4;
+      --accent: #60a5fa;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --error: #f87171;
+      --warn: #fbbf24;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+      background: radial-gradient(120% 120% at 10% 10%, rgba(96, 165, 250, 0.18), transparent),
+        radial-gradient(100% 100% at 90% 0%, rgba(94, 234, 212, 0.12), transparent),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px 20px 48px;
+    }
+
+    .shell {
+      width: min(1100px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .hero {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 20px 20px 16px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.32);
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      font-size: clamp(26px, 4vw, 32px);
+      margin-bottom: 6px;
+    }
+
+    .lede {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--stroke);
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 16px 16px 12px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    .list strong {
+      color: var(--muted);
+      font-weight: 500;
+      margin-right: 6px;
+    }
+
+    .status-pill {
+      align-self: flex-start;
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      border: 1px solid var(--stroke);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .status-pill.ok {
+      color: #0ea5e9;
+      border-color: rgba(14, 165, 233, 0.35);
+      background: rgba(14, 165, 233, 0.08);
+    }
+
+    .status-pill.warn {
+      color: var(--warn);
+      border-color: rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.08);
+    }
+
+    .status-pill.error {
+      color: var(--error);
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(248, 113, 113, 0.08);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+      font-size: 13px;
+      border: 1px solid var(--stroke);
+    }
+
+    .pages-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .page-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--stroke);
+    }
+
+    .page-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .page-label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .page-slug {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .tag {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border: 1px solid var(--stroke);
+    }
+
+    .tag.active {
+      color: #22c55e;
+      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(34, 197, 94, 0.08);
+    }
+
+    .tag.inactive {
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .btn {
+      border: 1px solid var(--stroke);
+      background: linear-gradient(135deg, #172554, #0f172a);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+    }
+
+    .foot {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .link {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .pill-stack {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 16px;
+      }
+
+      .card {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">Homologação</p>
+      <h1>Painel rápido de testes</h1>
+      <p class="lede">Confirme se o ambiente está apontando para o Supabase correto e se a página de Vivência em Parkour já aparece para homologar.</p>
+      <div class="chips">
+        <span class="chip" id="chip-host">Host: carregando...</span>
+        <span class="chip" id="chip-schema">Schema: carregando...</span>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="card" id="config-card">
+        <div class="card-title">Configuração</div>
+        <p class="card-desc">Confere as variáveis enviadas ao front.</p>
+        <ul class="list">
+          <li><strong>Supabase URL</strong> <span id="supabase-url">–</span></li>
+          <li><strong>Anon key</strong> <span id="supabase-key">–</span></li>
+          <li><strong>Schema solicitado</strong> <span id="supabase-schema">–</span></li>
+        </ul>
+        <span class="status-pill" id="config-status">Carregando...</span>
+      </article>
+
+      <article class="card" id="home-card">
+        <div class="card-title">Home</div>
+        <p class="card-desc">Valida se o conteúdo principal está acessível.</p>
+        <div class="list">
+          <span id="home-status-text">–</span>
+        </div>
+        <span class="status-pill" id="home-status">Aguardando...</span>
+      </article>
+
+      <article class="card" id="pages-card">
+        <div class="card-title">Páginas do menu</div>
+        <p class="card-desc">Lista completa vinda do Supabase.</p>
+        <div class="pill-stack">
+          <span class="badge" id="pages-count">–</span>
+          <span class="badge" id="pages-active">–</span>
+        </div>
+        <div class="pages-list" id="pages-list">Carregando...</div>
+        <span class="status-pill" id="pages-status">Aguardando...</span>
+      </article>
+
+      <article class="card" id="parkour-card">
+        <div class="card-title">Vivência em Parkour</div>
+        <p class="card-desc">Checa se a página está disponível para homologação.</p>
+        <div class="list" id="parkour-details">–</div>
+        <div class="actions" id="parkour-actions" style="display: none;"></div>
+        <span class="status-pill" id="parkour-status">Aguardando...</span>
+      </article>
+    </section>
+
+    <div class="foot">
+      <button class="btn" id="refresh-btn">🔄 Rodar checagem novamente</button>
+      <a class="link" href="/admin.html" target="_blank" rel="noopener">Abrir admin</a>
+      <a class="link" href="/" target="_blank" rel="noopener">Ir para a Home</a>
+    </div>
+
+    <p class="muted">Dica: se algo falhar, confirme se <code>.env</code> ou as variáveis do deploy apontam para o banco de homologação correto. Este painel usa o mesmo carregador de config da Home.</p>
+  </main>
+
+  <script type="module">
+    const hostChip = document.getElementById('chip-host');
+    const schemaChip = document.getElementById('chip-schema');
+    const supabaseUrlEl = document.getElementById('supabase-url');
+    const supabaseKeyEl = document.getElementById('supabase-key');
+    const supabaseSchemaEl = document.getElementById('supabase-schema');
+    const configStatusEl = document.getElementById('config-status');
+    const homeStatusEl = document.getElementById('home-status');
+    const homeStatusText = document.getElementById('home-status-text');
+    const pagesStatusEl = document.getElementById('pages-status');
+    const pagesListEl = document.getElementById('pages-list');
+    const pagesCountEl = document.getElementById('pages-count');
+    const pagesActiveEl = document.getElementById('pages-active');
+    const parkourStatusEl = document.getElementById('parkour-status');
+    const parkourDetailsEl = document.getElementById('parkour-details');
+    const parkourActionsEl = document.getElementById('parkour-actions');
+    const targetParkourSlug = 'vivencia-de-parkour-06-de-dezembro';
+
+    hostChip.textContent = `Host: ${window.location.host}`;
+
+    function mask(text, visible = 4) {
+      if (!text) return 'não definido';
+      if (text.length <= visible * 2) return text;
+      return `${text.slice(0, visible)}...${text.slice(-visible)}`;
+    }
+
+    function setStatus(el, status, message) {
+      el.classList.remove('ok', 'warn', 'error');
+      if (status) el.classList.add(status);
+      el.textContent = message;
+    }
+
+    function renderPages(pages) {
+      if (!pages || pages.length === 0) {
+        pagesListEl.textContent = 'Nenhuma página retornada.';
+        return;
+      }
+
+      pagesListEl.innerHTML = '';
+      pages.forEach((page) => {
+        const item = document.createElement('div');
+        item.className = 'page-item';
+
+        const meta = document.createElement('div');
+        meta.className = 'page-meta';
+        const label = document.createElement('div');
+        label.className = 'page-label';
+        label.textContent = page.label || 'Sem título';
+        const slug = document.createElement('div');
+        slug.className = 'page-slug';
+        slug.textContent = `#${page.slug || 'sem-slug'}`;
+        meta.appendChild(label);
+        meta.appendChild(slug);
+
+        const tag = document.createElement('span');
+        tag.className = `tag ${page.is_active ? 'active' : 'inactive'}`;
+        tag.textContent = page.is_active ? 'ATIVA' : 'PAUSADA';
+
+        item.appendChild(meta);
+        item.appendChild(tag);
+        pagesListEl.appendChild(item);
+      });
+    }
+
+    async function loadConfig() {
+      const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+      const configSrc = isLocal ? '/config.js' : '/api/config';
+
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = configSrc;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Falhou ao carregar ${configSrc}`));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function runChecks() {
+      let configLoaded = false;
+
+      try {
+        await loadConfig();
+        configLoaded = true;
+      } catch (err) {
+        setStatus(configStatusEl, 'warn', 'Não carregou config. Usando defaults do código.');
+      }
+
+      const { getHomeContent, getAllPages, getSupabaseSchema } = await import('../assets/js/supabase.js');
+      const activeSchema = typeof getSupabaseSchema === 'function'
+        ? getSupabaseSchema()
+        : (window.SUPABASE_SCHEMA || 'public');
+
+      schemaChip.textContent = `Schema em uso: ${activeSchema}`;
+
+      const supabaseUrl = window.SUPABASE_URL || '(default do código)';
+      const supabaseKey = window.SUPABASE_ANON_KEY || '(default do código)';
+
+      supabaseUrlEl.textContent = supabaseUrl;
+      supabaseKeyEl.textContent = mask(supabaseKey);
+      supabaseSchemaEl.textContent = window.SUPABASE_SCHEMA || 'public';
+
+      const configStatus = supabaseUrl && supabaseKey ? 'ok' : 'warn';
+      const configMsg = configLoaded
+        ? 'Config carregada com sucesso.'
+        : 'Config não encontrada, usando fallback embutido.';
+      setStatus(configStatusEl, configStatus, configMsg);
+
+      try {
+        const homeContent = await getHomeContent();
+        if (homeContent) {
+          const heroTitle = homeContent.hero?.title || 'Título não definido';
+          homeStatusText.textContent = `Hero: ${heroTitle}`;
+          setStatus(homeStatusEl, 'ok', 'Conteúdo carregado');
+        } else {
+          homeStatusText.textContent = 'Não veio conteúdo da tabela home_content.';
+          setStatus(homeStatusEl, 'warn', 'Sem conteúdo retornado');
+        }
+      } catch (error) {
+        homeStatusText.textContent = error.message;
+        setStatus(homeStatusEl, 'error', 'Erro ao buscar home');
+      }
+
+      let pages = [];
+      try {
+        pages = await getAllPages();
+        const active = pages.filter((p) => p.is_active);
+        pagesCountEl.textContent = `${pages.length} páginas no Supabase`;
+        pagesActiveEl.textContent = `${active.length} ativas no menu`;
+        renderPages(pages);
+        const hasPages = pages.length > 0;
+        setStatus(pagesStatusEl, hasPages ? 'ok' : 'warn', hasPages ? 'Páginas carregadas' : 'Nenhuma página retornada');
+      } catch (error) {
+        pagesListEl.textContent = error.message;
+        pagesCountEl.textContent = '0 páginas';
+        pagesActiveEl.textContent = '0 ativas';
+        setStatus(pagesStatusEl, 'error', 'Erro ao buscar páginas');
+      }
+
+      const parkour = pages.find((p) => p.slug === targetParkourSlug || (p.label || '').toLowerCase().includes('parkour'));
+      parkourActionsEl.innerHTML = '';
+
+      if (parkour) {
+        parkourDetailsEl.innerHTML = `Encontrada: <strong>${parkour.label}</strong><br>Slug: <code>${parkour.slug}</code><br>Status: ${parkour.is_active ? 'ativa' : 'pausada'}`;
+        const openLink = document.createElement('a');
+        openLink.href = `/p/#${parkour.slug}`;
+        openLink.className = 'btn';
+        openLink.target = '_blank';
+        openLink.rel = 'noopener';
+        openLink.textContent = 'Abrir página';
+        parkourActionsEl.appendChild(openLink);
+        parkourActionsEl.style.display = 'flex';
+        setStatus(parkourStatusEl, parkour.is_active ? 'ok' : 'warn', parkour.is_active ? 'Página ativa para testes.' : 'Página encontrada, mas desativada.');
+      } else {
+        parkourDetailsEl.textContent = 'Nenhuma página de Parkour foi retornada neste banco.';
+        parkourActionsEl.style.display = 'none';
+        setStatus(parkourStatusEl, 'warn', 'Cadastre ou copie a página de Parkour para este ambiente.');
+      }
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', () => window.location.reload());
+
+    runChecks().catch((err) => {
+      console.error(err);
+      setStatus(configStatusEl, 'error', 'Falha geral ao rodar os testes. Veja o console.');
+    });
+  </script>
+</body>
+</html>
