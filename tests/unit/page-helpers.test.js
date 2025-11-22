@@ -3,172 +3,18 @@
  * Funções de normalização e categorização de campos de formulário
  */
 
-import { describe, it, expect, vi } from 'vitest';
-
-// ========== FUNÇÕES EXTRAÍDAS DE page.js PARA TESTE ==========
-// Nota: Idealmente estas funções seriam exportadas de um módulo separado
-
-function slugify(text = '') {
-  return text
-    .toString()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-function normalizeSession(session, fallbackId) {
-  const capacity = typeof session?.capacity === 'number'
-    ? session.capacity
-    : parseInt(session?.capacity || '0', 10) || 0;
-
-  return {
-    id: session?.id || `${fallbackId}`,
-    title: session?.title || '',
-    start: session?.start || '',
-    end: session?.end || '',
-    capacity,
-    notes: session?.notes || ''
-  };
-}
-
-function normalizeField(field, index) {
-  const fallbackId = `field_${index}_${slugify(field?.label || 'campo')}`;
-  const normalized = {
-    ...field,
-    id: field?.id || fallbackId,
-    type: field?.type || 'text',
-    label: field?.label || '',
-    placeholder: field?.placeholder || '',
-    required: Boolean(field?.required),
-    options: Array.isArray(field?.options) ? field.options : [],
-    sessions: []
-  };
-
-  if (normalized.type === 'sessions') {
-    const sessions = Array.isArray(field?.sessions) ? field.sessions : [];
-    normalized.sessions = sessions.map((session, sessionIndex) => {
-      const sessionFallbackId = `${normalized.id}_session_${sessionIndex}`;
-      return normalizeSession(session, sessionFallbackId);
-    });
-  }
-
-  return normalized;
-}
-
-function formatSessionTime(timeString) {
-  if (!timeString || typeof timeString !== 'string') return '';
-  if (!timeString.includes(':')) return timeString;
-  const [hour, minute] = timeString.split(':');
-  return `${hour.padStart(2, '0')}:${(minute || '00').padStart(2, '0')}`;
-}
-
-function buildSessionDisplay(session) {
-  const timeStart = formatSessionTime(session.start);
-  const timeEnd = formatSessionTime(session.end);
-  const timeRange = timeStart && timeEnd ? `${timeStart} - ${timeEnd}` : '';
-  let display = session.title || '';
-  if (timeRange) {
-    display += display ? ` (${timeRange})` : timeRange;
-  }
-  if (session.notes) {
-    display += display ? ` – ${session.notes}` : session.notes;
-  }
-  return display;
-}
-
-function isParticipantField(field) {
-  const label = (field.label || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-
-  const responsibleKeywords = [
-    'responsavel',
-    'organizador',
-    'contato principal',
-    'contato do responsavel',
-    'whatsapp do responsavel',
-    'telefone do responsavel',
-    'email do responsavel',
-    'dados do responsavel'
-  ];
-
-  if (responsibleKeywords.some(keyword => label.includes(keyword))) {
-    return false;
-  }
-
-  return true;
-}
-
-function categorizeFields(fields) {
-  const groupFields = [];
-  const participantFields = [];
-
-  fields.forEach(field => {
-    if (field.type === 'sessions') {
-      groupFields.push(field);
-    } else if (isParticipantField(field)) {
-      participantFields.push(field);
-    } else {
-      groupFields.push(field);
-    }
-  });
-
-  return { groupFields, participantFields };
-}
-
-function normalizeLabelKey(label = '') {
-  return label
-    .toString()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function extractFieldBase(label) {
-  const normalized = normalizeLabelKey(label);
-
-  const suffixesToRemove = [
-    'do responsavel',
-    'da responsavel',
-    'dos responsaveis',
-    'das responsaveis',
-    'do organizador',
-    'da organizador',
-    'do participante',
-    'da participante',
-    'dos participantes',
-    'das participantes',
-    'principal',
-    'de contato',
-    'para contato'
-  ];
-
-  let base = normalized;
-  suffixesToRemove.forEach(suffix => {
-    base = base.replace(new RegExp(`\\s*${suffix}\\s*$`, 'g'), '');
-    base = base.replace(new RegExp(`\\s*${suffix}\\s+`, 'g'), ' ');
-  });
-
-  base = base.trim();
-
-  const synonymMap = {
-    'telefone/whatsapp': 'telefone',
-    'whatsapp/telefone': 'telefone',
-    'whatsapp': 'telefone',
-    'celular': 'telefone',
-    'fone': 'telefone',
-    'e-mail': 'email',
-    'correio eletronico': 'email',
-    'cpf/rg': 'cpf',
-    'rg/cpf': 'cpf',
-    'documento': 'cpf',
-    'doc': 'cpf'
-  };
-
-  return synonymMap[base] || base;
-}
+import { describe, it, expect } from 'vitest';
+import {
+  slugify,
+  normalizeSession,
+  normalizeField,
+  formatSessionTime,
+  buildSessionDisplay,
+  isParticipantField,
+  categorizeFields,
+  normalizeLabelKey,
+  extractFieldBase
+} from '../../assets/js/utils/helpers.js';
 
 // ========== TESTES ==========
 

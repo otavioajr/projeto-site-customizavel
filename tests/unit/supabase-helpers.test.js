@@ -1,127 +1,19 @@
 /**
- * Testes unitários para helpers e lógica de supabase.js
- * Estas funções são extraídas para teste isolado
+ * Testes unitários para helpers de supabase.js
+ * Funções de validação, capacidade e manipulação de dados
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ========== FUNÇÕES EXTRAÍDAS DE supabase.js PARA TESTE ==========
-
-function parseSequenceValue(value) {
-  const parsed = parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-// Validação de imagem (extraída de uploadImage)
-function validateImageFile(file) {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  const maxSize = 5 * 1024 * 1024; // 5MB
-
-  if (!allowedTypes.includes(file.type)) {
-    return {
-      valid: false,
-      error: 'Formato não suportado. Use JPG, PNG, GIF ou WebP.'
-    };
-  }
-
-  if (file.size > maxSize) {
-    return {
-      valid: false,
-      error: 'Arquivo muito grande. Tamanho máximo: 5MB.'
-    };
-  }
-
-  return { valid: true };
-}
-
-// Cálculo de capacidade (lógica extraída de saveInscription)
-function checkCapacityLimit(currentCount, maxParticipants) {
-  if (maxParticipants <= 0) {
-    return { available: true };
-  }
-
-  if (currentCount >= maxParticipants) {
-    return {
-      available: false,
-      error: `LIMIT_REACHED:As vagas esgotaram! Esta atividade tinha limite de ${maxParticipants} ${maxParticipants === 1 ? 'vaga' : 'vagas'}.`
-    };
-  }
-
-  return {
-    available: true,
-    remaining: maxParticipants - currentCount
-  };
-}
-
-// Cálculo de vagas de sessão (lógica extraída)
-function checkSessionCapacity(sessionInscriptions, capacity, groupSize = 1) {
-  let totalParticipants = 0;
-
-  if (Array.isArray(sessionInscriptions)) {
-    totalParticipants = sessionInscriptions.reduce((sum, inscription) => {
-      const inscriptionGroupSize = inscription?.form_data?._group_size || 1;
-      return sum + parseInt(inscriptionGroupSize, 10);
-    }, 0);
-  }
-
-  const availableSlots = Math.max(capacity - totalParticipants, 0);
-
-  return {
-    totalParticipants,
-    availableSlots,
-    canAccommodate: availableSlots >= groupSize
-  };
-}
-
-// Preparação de dados de inscrição (lógica extraída)
-function prepareInscriptionData(pageSlug, formData, sequence, groupId = null) {
-  return {
-    page_slug: pageSlug,
-    group_id: groupId || generateUUID(),
-    is_responsible: true,
-    responsible_id: null,
-    participant_number: 1,
-    total_participants: formData._group_size || 1,
-    form_data: {
-      ...formData,
-      _sequence: sequence,
-      _group_size: formData._group_size || 1
-    },
-    status: 'pending',
-    created_at: new Date().toISOString()
-  };
-}
-
-// Fallback para localStorage (lógica extraída de getPages)
-function getFromLocalStorageWithFallback(key, defaultValue = []) {
-  try {
-    const stored = localStorage.getItem(key);
-    if (!stored) return defaultValue;
-    return JSON.parse(stored);
-  } catch (error) {
-    console.error(`Erro ao ler ${key} do localStorage:`, error);
-    return defaultValue;
-  }
-}
-
-// Salvar no localStorage (lógica extraída)
-function saveToLocalStorage(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    console.error(`Erro ao salvar ${key} no localStorage:`, error);
-    return false;
-  }
-}
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  parseSequenceValue,
+  generateUUID,
+  validateImageFile,
+  checkCapacityLimit,
+  checkSessionCapacity,
+  prepareInscriptionData,
+  getFromLocalStorageWithFallback,
+  saveToLocalStorage
+} from '../../assets/js/utils/helpers.js';
 
 // ========== TESTES ==========
 
