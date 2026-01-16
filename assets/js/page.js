@@ -1266,7 +1266,7 @@ async function loadSiteName() {
       }
     }
 
-    const siteName = homeContent?.seo?.site_name || 'Aventuras';
+    const siteName = homeContent?.seo?.site_name || 'Chaves Adventure';
     const logoElement = document.getElementById('site-logo');
     if (logoElement) {
       logoElement.textContent = siteName;
@@ -1275,7 +1275,7 @@ async function loadSiteName() {
     console.error('Erro ao carregar nome do site:', e);
     const logoElement = document.getElementById('site-logo');
     if (logoElement) {
-      logoElement.textContent = 'Aventuras';
+      logoElement.textContent = 'Chaves Adventure';
     }
   }
 }
