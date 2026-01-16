@@ -407,7 +407,8 @@ function getSlugFromUrl() {
   let hash = window.location.hash.replace('#', '');
   if (hash) {
     hash = hash.split('?')[0];
-    return hash;
+    // Decode URI component para slugs com espaços, acentos e caracteres especiais
+    return decodeURIComponent(hash);
   }
   const params = new URLSearchParams(window.location.search);
   return params.get('slug');
