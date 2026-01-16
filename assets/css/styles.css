@@ -491,6 +491,7 @@ a {
 .form-description {
   color: var(--color-gray-dark);
   font-size: 1.125rem;
+  white-space: pre-line;
 }
 
 .inscription-form {
