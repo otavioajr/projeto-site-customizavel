@@ -1,5 +1,5 @@
 // supabase.js - Configuração e funções do Supabase
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // Configuração do Supabase (usar variáveis de ambiente em produção)
 const supabaseUrl = window.SUPABASE_URL || 'https://yzsgoxrrhjiiulmnwrfo.supabase.co';
